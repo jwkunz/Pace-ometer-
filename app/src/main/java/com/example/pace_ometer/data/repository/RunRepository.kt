@@ -25,6 +25,8 @@ class RunRepository(
 
     suspend fun getRun(runId: Long): RunEntity? = runDao.getById(runId)
 
+    fun observeRun(runId: Long): Flow<RunEntity?> = runDao.observeById(runId)
+
     fun observeSavedRuns(): Flow<List<RunEntity>> = runDao.observeSavedRuns()
 
     suspend fun getSavedRuns(): List<RunEntity> = runDao.getSavedRuns()

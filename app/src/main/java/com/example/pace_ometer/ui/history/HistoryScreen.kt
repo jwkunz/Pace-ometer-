@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
@@ -27,6 +28,7 @@ import java.util.Date
 @Composable
 fun HistoryScreen(
     onBack: () -> Unit,
+    onOpenRun: (Long) -> Unit,
     viewModel: HistoryViewModel = viewModel()
 ) {
     val runs by viewModel.runs.collectAsState()
@@ -45,7 +47,7 @@ fun HistoryScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(runs, key = { it.id }) { run ->
-                    Card(modifier = Modifier.fillMaxWidth()) {
+                    Card(modifier = Modifier.fillMaxWidth().clickable { onOpenRun(run.id) }) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
                                 DateFormat.getDateTimeInstance().format(Date(run.startTimeEpochMs)),

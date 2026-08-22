@@ -7,9 +7,11 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.pace_ometer.PaceometerApp
 import com.example.pace_ometer.ui.activerun.ActiveRunScreen
 import com.example.pace_ometer.ui.help.HelpScreen
@@ -18,6 +20,7 @@ import com.example.pace_ometer.ui.home.HomeScreen
 import com.example.pace_ometer.ui.legal.LegalScreen
 import com.example.pace_ometer.ui.onboarding.OnboardingScreen
 import com.example.pace_ometer.ui.settings.SettingsScreen
+import com.example.pace_ometer.ui.summary.RunSummaryScreen
 import kotlinx.coroutines.flow.map
 
 private object Routes {
@@ -28,6 +31,8 @@ private object Routes {
     const val SETTINGS = "settings"
     const val HELP = "help"
     const val LEGAL = "legal"
+    const val RUN_SUMMARY = "run_summary/{runId}"
+    fun runSummary(runId: Long) = "run_summary/$runId"
 }
 
 @Composable
@@ -67,7 +72,17 @@ fun PaceometerNavHost() {
             ActiveRunScreen(onFinished = { navController.popBackStack(Routes.HOME, inclusive = false) })
         }
         composable(Routes.HISTORY) {
-            HistoryScreen(onBack = { navController.popBackStack() })
+            HistoryScreen(
+                onBack = { navController.popBackStack() },
+                onOpenRun = { runId -> navController.navigate(Routes.runSummary(runId)) }
+            )
+        }
+        composable(
+            Routes.RUN_SUMMARY,
+            arguments = listOf(navArgument("runId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val runId = backStackEntry.arguments?.getLong("runId") ?: return@composable
+            RunSummaryScreen(runId = runId, onBack = { navController.popBackStack() })
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(onBack = { navController.popBackStack() })
