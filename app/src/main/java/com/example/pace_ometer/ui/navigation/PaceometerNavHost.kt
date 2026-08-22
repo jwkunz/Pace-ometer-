@@ -14,6 +14,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.pace_ometer.PaceometerApp
 import com.example.pace_ometer.ui.activerun.ActiveRunScreen
+import com.example.pace_ometer.ui.equipment.EquipmentDetailScreen
+import com.example.pace_ometer.ui.equipment.EquipmentScreen
 import com.example.pace_ometer.ui.help.HelpScreen
 import com.example.pace_ometer.ui.history.HistoryScreen
 import com.example.pace_ometer.ui.home.HomeScreen
@@ -35,6 +37,9 @@ private object Routes {
     const val RECORDS = "records"
     const val RUN_SUMMARY = "run_summary/{runId}"
     fun runSummary(runId: Long) = "run_summary/$runId"
+    const val EQUIPMENT = "equipment"
+    const val EQUIPMENT_DETAIL = "equipment/{equipmentId}"
+    fun equipmentDetail(equipmentId: Long) = "equipment/$equipmentId"
 }
 
 @Composable
@@ -95,7 +100,8 @@ fun PaceometerNavHost() {
                 onBack = { navController.popBackStack() },
                 onResetComplete = {
                     navController.navigate(Routes.ONBOARDING) { popUpTo(0) { inclusive = true } }
-                }
+                },
+                onOpenEquipment = { navController.navigate(Routes.EQUIPMENT) }
             )
         }
         composable(Routes.HELP) {
@@ -103,6 +109,19 @@ fun PaceometerNavHost() {
         }
         composable(Routes.LEGAL) {
             LegalScreen(onBack = { navController.popBackStack() })
+        }
+        composable(Routes.EQUIPMENT) {
+            EquipmentScreen(
+                onBack = { navController.popBackStack() },
+                onOpenEquipment = { equipmentId -> navController.navigate(Routes.equipmentDetail(equipmentId)) }
+            )
+        }
+        composable(
+            Routes.EQUIPMENT_DETAIL,
+            arguments = listOf(navArgument("equipmentId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val equipmentId = backStackEntry.arguments?.getLong("equipmentId") ?: return@composable
+            EquipmentDetailScreen(equipmentId = equipmentId, onBack = { navController.popBackStack() })
         }
     }
 }

@@ -5,6 +5,7 @@ import android.preference.PreferenceManager
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.example.pace_ometer.data.db.PaceometerDatabase
+import com.example.pace_ometer.data.repository.EquipmentRepository
 import com.example.pace_ometer.data.repository.PersonalRecordRepository
 import com.example.pace_ometer.data.repository.RunRepository
 import com.example.pace_ometer.data.repository.SeasonRepository
@@ -17,7 +18,9 @@ class PaceometerApp : Application() {
 
     val database: PaceometerDatabase by lazy {
         Room.databaseBuilder(this, PaceometerDatabase::class.java, PaceometerDatabase.DATABASE_NAME)
-            // Pre-release app, no installed base to migrate yet.
+            .addMigrations(PaceometerDatabase.MIGRATION_2_3)
+            // Pre-release app; only a real migration path is kept for versions already
+            // installed on the test device, anything older falls back to a fresh start.
             .fallbackToDestructiveMigration(dropAllTables = true)
             .build()
     }
@@ -36,6 +39,10 @@ class PaceometerApp : Application() {
 
     val personalRecordRepository: PersonalRecordRepository by lazy {
         PersonalRecordRepository(database.personalRecordDao(), database.seasonDao())
+    }
+
+    val equipmentRepository: EquipmentRepository by lazy {
+        EquipmentRepository(database.equipmentDao())
     }
 
     override fun onCreate() {

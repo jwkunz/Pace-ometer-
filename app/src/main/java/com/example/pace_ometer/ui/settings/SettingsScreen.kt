@@ -60,6 +60,7 @@ import kotlinx.coroutines.launch
 fun SettingsScreen(
     onBack: () -> Unit,
     onResetComplete: () -> Unit,
+    onOpenEquipment: () -> Unit,
     viewModel: SettingsViewModel = viewModel()
 ) {
     val settings by viewModel.settings.collectAsState()
@@ -129,6 +130,15 @@ fun SettingsScreen(
 
             Text("Seasons", style = MaterialTheme.typography.titleSmall)
             SeasonSection(viewModel = viewModel)
+
+            Text("Equipment", style = MaterialTheme.typography.titleSmall)
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text(
+                    "Track cumulative distance on gear like running shoes and retire them when worn out.",
+                    style = MaterialTheme.typography.bodySmall
+                )
+                OutlinedButton(onClick = onOpenEquipment) { Text("Manage equipment") }
+            }
 
             Text("Reset", style = MaterialTheme.typography.titleSmall)
             ResetDataSection(viewModel = viewModel, onResetComplete = onResetComplete)

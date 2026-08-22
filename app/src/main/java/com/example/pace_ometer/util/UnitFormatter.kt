@@ -9,6 +9,9 @@ private const val METERS_PER_KM = 1000.0
 fun metersToDisplayUnitDistance(meters: Double, unitSystem: UnitSystem): Double =
     if (unitSystem == UnitSystem.IMPERIAL) meters / METERS_PER_MILE else meters / METERS_PER_KM
 
+fun displayUnitDistanceToMeters(value: Double, unitSystem: UnitSystem): Double =
+    if (unitSystem == UnitSystem.IMPERIAL) value * METERS_PER_MILE else value * METERS_PER_KM
+
 fun formatDistanceMeters(meters: Double, unitSystem: UnitSystem = UnitSystem.METRIC): String {
     val value = metersToDisplayUnitDistance(meters, unitSystem)
     val unit = if (unitSystem == UnitSystem.IMPERIAL) "mi" else "km"

@@ -33,8 +33,10 @@ import com.example.pace_ometer.PaceometerApp
 import com.example.pace_ometer.data.settings.Gender
 import com.example.pace_ometer.data.settings.UnitSystem
 import com.example.pace_ometer.ui.common.SimpleViewModelFactory
+import com.example.pace_ometer.ui.equipment.AddEquipmentDialog
 import com.example.pace_ometer.util.displayHeightToCm
 import com.example.pace_ometer.util.displayWeightToKg
+import com.example.pace_ometer.util.formatDistanceMeters
 import java.time.Instant
 import java.time.ZoneOffset
 
@@ -50,7 +52,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
     val context = LocalContext.current
     val app = context.applicationContext as PaceometerApp
     val viewModel: OnboardingViewModel = viewModel(
-        factory = SimpleViewModelFactory { OnboardingViewModel(app.settingsRepository) }
+        factory = SimpleViewModelFactory { OnboardingViewModel(app.settingsRepository, app.equipmentRepository) }
     )
 
     var unitSystem by remember { mutableStateOf(UnitSystem.METRIC) }
@@ -59,6 +61,8 @@ fun OnboardingScreen(onComplete: () -> Unit) {
     var weightText by remember { mutableStateOf("70") }
     var heightText by remember { mutableStateOf("") }
     var showDatePicker by remember { mutableStateOf(false) }
+    var pendingEquipment by remember { mutableStateOf(listOf<PendingEquipment>()) }
+    var showAddEquipmentDialog by remember { mutableStateOf(false) }
 
     val weightUnitLabel = if (unitSystem == UnitSystem.IMPERIAL) "lb" else "kg"
     val heightUnitLabel = if (unitSystem == UnitSystem.IMPERIAL) "in" else "cm"
@@ -118,6 +122,22 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             )
 
+            Text("Equipment — optional", style = MaterialTheme.typography.titleSmall)
+            Text(
+                "If you want to track wear on gear like running shoes, add it now (or later in Settings).",
+                style = MaterialTheme.typography.bodySmall
+            )
+            pendingEquipment.forEach { item ->
+                androidx.compose.foundation.layout.Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("${item.name} (${item.type}) — starting at ${formatDistanceMeters(item.startingDistanceMeters, unitSystem)}")
+                    TextButton(onClick = { pendingEquipment = pendingEquipment - item }) { Text("Remove") }
+                }
+            }
+            TextButton(onClick = { showAddEquipmentDialog = true }) { Text("+ Add equipment") }
+
             Button(
                 onClick = {
                     val day = birthDateEpochDay ?: return@Button
@@ -129,6 +149,7 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                         unitSystem = unitSystem,
                         bodyWeightKg = displayWeightToKg(weightDisplay, unitSystem),
                         heightCm = heightDisplay?.let { displayHeightToCm(it, unitSystem) },
+                        equipmentToAdd = pendingEquipment,
                         onDone = onComplete
                     )
                 },
@@ -136,6 +157,17 @@ fun OnboardingScreen(onComplete: () -> Unit) {
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Get started") }
         }
+    }
+
+    if (showAddEquipmentDialog) {
+        AddEquipmentDialog(
+            unitSystem = unitSystem,
+            onDismiss = { showAddEquipmentDialog = false },
+            onAdd = { name, type, startingDistanceMeters ->
+                pendingEquipment = pendingEquipment + PendingEquipment(name, type, startingDistanceMeters)
+                showAddEquipmentDialog = false
+            }
+        )
     }
 
     if (showDatePicker) {
