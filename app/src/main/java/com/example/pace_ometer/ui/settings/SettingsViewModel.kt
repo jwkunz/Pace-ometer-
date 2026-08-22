@@ -9,10 +9,12 @@ import com.example.pace_ometer.data.repository.SeasonRepository
 import com.example.pace_ometer.data.settings.SettingsRepository
 import com.example.pace_ometer.data.settings.UnitSystem
 import com.example.pace_ometer.data.settings.UserSettings
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -56,5 +58,14 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
 
     fun updateAnnouncementToggle(update: (UserSettings) -> UserSettings) {
         viewModelScope.launch { settingsRepository.updateAnnouncementToggles(update) }
+    }
+
+    /** Wipes all runs/samples/seasons/records and every stored setting, back to a first-launch state. */
+    fun resetAllData(onDone: () -> Unit) {
+        viewModelScope.launch {
+            withContext(Dispatchers.IO) { app.database.clearAllTables() }
+            settingsRepository.resetToDefaults()
+            onDone()
+        }
     }
 }

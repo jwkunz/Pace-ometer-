@@ -17,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -51,6 +52,7 @@ import com.example.pace_ometer.util.kgToDisplayWeight
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
+    onResetComplete: () -> Unit,
     viewModel: SettingsViewModel = viewModel()
 ) {
     val settings by viewModel.settings.collectAsState()
@@ -120,7 +122,43 @@ fun SettingsScreen(
 
             Text("Seasons", style = MaterialTheme.typography.titleSmall)
             SeasonSection(viewModel = viewModel)
+
+            Text("Reset", style = MaterialTheme.typography.titleSmall)
+            ResetDataSection(viewModel = viewModel, onResetComplete = onResetComplete)
         }
+    }
+}
+
+@Composable
+private fun ResetDataSection(viewModel: SettingsViewModel, onResetComplete: () -> Unit) {
+    var showConfirmDialog by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            "Deletes every saved run, personal record, season, and setting on this device, " +
+                "and restarts the app as if freshly installed.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        Button(
+            onClick = { showConfirmDialog = true },
+            colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+            modifier = Modifier.fillMaxWidth()
+        ) { Text("Reset all app data") }
+    }
+
+    if (showConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showConfirmDialog = false },
+            title = { Text("Reset all app data?") },
+            text = { Text("This permanently deletes all runs, records, seasons, and settings. This cannot be undone.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    showConfirmDialog = false
+                    viewModel.resetAllData(onResetComplete)
+                }) { Text("Reset") }
+            },
+            dismissButton = { TextButton(onClick = { showConfirmDialog = false }) { Text("Cancel") } }
+        )
     }
 }
 

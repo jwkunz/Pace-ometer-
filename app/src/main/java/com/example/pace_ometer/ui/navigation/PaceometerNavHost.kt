@@ -91,7 +91,12 @@ fun PaceometerNavHost() {
             PersonalRecordsScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onResetComplete = {
+                    navController.navigate(Routes.ONBOARDING) { popUpTo(0) { inclusive = true } }
+                }
+            )
         }
         composable(Routes.HELP) {
             HelpScreen(onBack = { navController.popBackStack() })

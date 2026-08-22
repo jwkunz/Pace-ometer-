@@ -53,6 +53,11 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    /** Wipes every stored preference, restoring first-launch defaults (including onboarding gating). */
+    suspend fun resetToDefaults() {
+        dataStore.edit { prefs -> prefs.clear() }
+    }
+
     suspend fun updateUnitSystem(unitSystem: UnitSystem) {
         dataStore.edit { prefs -> prefs[Keys.UNIT_SYSTEM] = unitSystem.name }
     }
