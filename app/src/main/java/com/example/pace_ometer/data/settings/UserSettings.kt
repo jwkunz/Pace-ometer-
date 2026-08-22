@@ -11,6 +11,7 @@ data class UserSettings(
     val heightCm: Float? = null,
     val unitSystem: UnitSystem = UnitSystem.METRIC,
     val bodyWeightKg: Float = 70f,
+    val heartRateDeviceAddress: String? = null,
     val announcementIntervalValue: Float = 1f,
     val announcementIntervalUnit: UnitSystem = UnitSystem.METRIC,
     val announceDistance: Boolean = true,

@@ -30,4 +30,8 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun updateHeightCm(cm: Float?) {
         viewModelScope.launch { settingsRepository.updateHeightCm(cm) }
     }
+
+    fun updateHeartRateDeviceAddress(address: String?) {
+        viewModelScope.launch { settingsRepository.updateHeartRateDeviceAddress(address) }
+    }
 }
