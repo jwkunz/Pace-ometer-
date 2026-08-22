@@ -14,10 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
@@ -44,7 +40,6 @@ fun HomeScreen(
     onOpenLegal: () -> Unit
 ) {
     val context = LocalContext.current
-    var menuExpanded by remember { mutableStateOf(false) }
     var showBackgroundLocationRationale by remember { mutableStateOf(false) }
 
     val notificationsGranted = if (Build.VERSION.SDK_INT >= 33) {
@@ -62,22 +57,7 @@ fun HomeScreen(
     }
 
     Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Pace-ometer") },
-                actions = {
-                    IconButton(onClick = { menuExpanded = true }) {
-                        Icon(painter = androidx.compose.ui.res.painterResource(com.example.pace_ometer.R.drawable.ic_account_box), contentDescription = "Menu")
-                    }
-                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                        DropdownMenuItem(text = { Text("Personal Records") }, onClick = { menuExpanded = false; onOpenRecords() })
-                        DropdownMenuItem(text = { Text("Settings") }, onClick = { menuExpanded = false; onOpenSettings() })
-                        DropdownMenuItem(text = { Text("Help") }, onClick = { menuExpanded = false; onOpenHelp() })
-                        DropdownMenuItem(text = { Text("Legal") }, onClick = { menuExpanded = false; onOpenLegal() })
-                    }
-                }
-            )
-        }
+        topBar = { TopAppBar(title = { Text("Pace-ometer") }) }
     ) { padding ->
         Column(
             modifier = Modifier
@@ -116,6 +96,10 @@ fun HomeScreen(
             }
 
             OutlinedButton(onClick = onOpenHistory, modifier = Modifier.fillMaxWidth()) { Text("Run History") }
+            OutlinedButton(onClick = onOpenRecords, modifier = Modifier.fillMaxWidth()) { Text("Personal Records") }
+            OutlinedButton(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) { Text("Settings") }
+            OutlinedButton(onClick = onOpenHelp, modifier = Modifier.fillMaxWidth()) { Text("Help") }
+            OutlinedButton(onClick = onOpenLegal, modifier = Modifier.fillMaxWidth()) { Text("Legal") }
         }
     }
 
