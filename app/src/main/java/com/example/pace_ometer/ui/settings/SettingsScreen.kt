@@ -1,7 +1,7 @@
 package com.example.pace_ometer.ui.settings
 
 import android.Manifest
-import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothManager
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -30,6 +30,8 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -42,12 +44,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pace_ometer.data.settings.UnitSystem
 import com.example.pace_ometer.data.settings.UserSettings
 import com.example.pace_ometer.sensors.ble.BleDeviceScanner
-import com.example.pace_ometer.sensors.ble.BleServiceUuids
+import com.example.pace_ometer.sensors.ble.DiscoveredAthleticDevice
+import com.example.pace_ometer.sensors.ble.HeartRateGattSensor
 import com.example.pace_ometer.ui.common.permissions.isPermissionGranted
 import com.example.pace_ometer.util.cmToDisplayHeight
 import com.example.pace_ometer.util.displayHeightToCm
 import com.example.pace_ometer.util.displayWeightToKg
 import com.example.pace_ometer.util.kgToDisplayWeight
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 
 @Composable
 fun SettingsScreen(
@@ -111,7 +118,7 @@ fun SettingsScreen(
             )
 
             Text("Sensors", style = MaterialTheme.typography.titleSmall)
-            HeartRateSensorSection(
+            AthleticSensorSection(
                 deviceAddress = settings.heartRateDeviceAddress,
                 onDeviceSelected = { viewModel.updateHeartRateDeviceAddress(it) },
                 onForget = { viewModel.updateHeartRateDeviceAddress(null) }
@@ -305,7 +312,7 @@ private fun VoiceAnnouncementSection(settings: UserSettings, viewModel: Settings
 }
 
 @Composable
-private fun HeartRateSensorSection(
+private fun AthleticSensorSection(
     deviceAddress: String?,
     onDeviceSelected: (String) -> Unit,
     onForget: () -> Unit
@@ -324,14 +331,16 @@ private fun HeartRateSensorSection(
     }
 
     Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(
-            deviceAddress?.let { "Heart rate monitor: $it" } ?: "No heart rate monitor connected",
-            style = MaterialTheme.typography.bodyMedium
-        )
+        if (deviceAddress != null) {
+            Text("Heart rate monitor: $deviceAddress", style = MaterialTheme.typography.bodyMedium)
+            LiveHeartRateStatus(deviceAddress = deviceAddress)
+        } else {
+            Text("No heart rate monitor connected", style = MaterialTheme.typography.bodyMedium)
+        }
         OutlinedButton(onClick = {
             val alreadyGranted = bluetoothPermissions.all { isPermissionGranted(context, it) }
             if (alreadyGranted) showScanDialog = true else permissionLauncher.launch(bluetoothPermissions)
-        }) { Text("Scan for heart rate monitor") }
+        }) { Text("Scan for athletic sensors") }
 
         if (deviceAddress != null) {
             OutlinedButton(onClick = onForget) { Text("Forget device") }
@@ -339,7 +348,7 @@ private fun HeartRateSensorSection(
     }
 
     if (showScanDialog) {
-        HeartRateScanDialog(
+        AthleticSensorScanDialog(
             onDismiss = { showScanDialog = false },
             onDeviceSelected = {
                 onDeviceSelected(it)
@@ -349,17 +358,57 @@ private fun HeartRateSensorSection(
     }
 }
 
+/** Connects just long enough to show a live BPM reading, confirming the paired monitor actually works. */
 @android.annotation.SuppressLint("MissingPermission")
 @Composable
-private fun HeartRateScanDialog(onDismiss: () -> Unit, onDeviceSelected: (String) -> Unit) {
+private fun LiveHeartRateStatus(deviceAddress: String) {
     val context = LocalContext.current
-    var devices by remember { mutableStateOf(listOf<BluetoothDevice>()) }
+    var bpm by remember(deviceAddress) { mutableStateOf<Int?>(null) }
+    var connected by remember(deviceAddress) { mutableStateOf(false) }
 
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    DisposableEffect(deviceAddress) {
+        val hasBluetoothConnect = isPermissionGranted(context, Manifest.permission.BLUETOOTH_CONNECT)
+        if (!hasBluetoothConnect) return@DisposableEffect onDispose {}
+
+        val adapter = context.getSystemService(BluetoothManager::class.java)?.adapter
+        val device = adapter?.let { runCatching { it.getRemoteDevice(deviceAddress) }.getOrNull() }
+        val sensor = HeartRateGattSensor(context)
+        val scope = CoroutineScope(SupervisorJob())
+
+        if (device != null) {
+            sensor.connect(device)
+            scope.launch { sensor.isConnected.collect { connected = it } }
+            scope.launch { sensor.readings.collect { bpm = it.bpm } }
+        }
+
+        onDispose {
+            sensor.disconnect()
+            scope.cancel()
+        }
+    }
+
+    Text(
+        when {
+            bpm != null -> "Current: $bpm bpm"
+            connected -> "Connected — waiting for a reading…"
+            else -> "Connecting…"
+        },
+        style = MaterialTheme.typography.bodySmall,
+        color = MaterialTheme.colorScheme.primary
+    )
+}
+
+@android.annotation.SuppressLint("MissingPermission")
+@Composable
+private fun AthleticSensorScanDialog(onDismiss: () -> Unit, onDeviceSelected: (String) -> Unit) {
+    val context = LocalContext.current
+    var devices by remember { mutableStateOf(listOf<DiscoveredAthleticDevice>()) }
+
+    LaunchedEffect(Unit) {
         val scanner = BleDeviceScanner(context)
-        scanner.scanForService(BleServiceUuids.HEART_RATE_SERVICE).collect { device ->
-            if (devices.none { it.address == device.address }) {
-                devices = devices + device
+        scanner.scanForServices().collect { found ->
+            if (devices.none { it.device.address == found.device.address }) {
+                devices = devices + found
             }
         }
     }
@@ -367,18 +416,27 @@ private fun HeartRateScanDialog(onDismiss: () -> Unit, onDeviceSelected: (String
     AlertDialog(
         onDismissRequest = onDismiss,
         confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } },
-        title = { Text("Nearby heart rate monitors") },
+        title = { Text("Nearby athletic sensors") },
         text = {
             if (devices.isEmpty()) {
-                Text("Searching… make sure your monitor is on and nearby.")
+                Text("Searching… make sure your sensor is on and nearby.")
             } else {
                 LazyColumn {
-                    items(devices, key = { it.address }) { device ->
-                        Button(
-                            onClick = { onDeviceSelected(device.address) },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(device.name ?: device.address)
+                    items(devices, key = { it.device.address }) { found ->
+                        val isHeartRate = "Heart rate" in found.serviceLabels
+                        val typeLabel = found.serviceLabels.joinToString(", ").ifEmpty { "Unknown type" }
+                        Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
+                            Button(
+                                onClick = { if (isHeartRate) onDeviceSelected(found.device.address) },
+                                enabled = isHeartRate,
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Text(found.device.name ?: found.device.address)
+                            }
+                            Text(
+                                if (isHeartRate) typeLabel else "$typeLabel — not yet supported",
+                                style = MaterialTheme.typography.labelSmall
+                            )
                         }
                     }
                 }

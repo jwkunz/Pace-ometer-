@@ -15,28 +15,34 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import java.util.UUID
 
-/** Scans for nearby BLE peripherals advertising a given GATT service (e.g. Heart Rate 0x180D). */
+/** One nearby BLE peripheral found while scanning, labeled by whichever athletic services it advertises. */
+data class DiscoveredAthleticDevice(val device: BluetoothDevice, val serviceLabels: List<String>)
+
+/** Scans for nearby BLE peripherals advertising any of a set of GATT services (e.g. heart rate, cadence). */
 class BleDeviceScanner(private val context: Context) {
 
     @SuppressLint("MissingPermission")
-    fun scanForService(serviceUuid: UUID): Flow<BluetoothDevice> = callbackFlow {
-        val bluetoothManager = context.getSystemService(BluetoothManager::class.java)
-        val scanner = bluetoothManager?.adapter?.bluetoothLeScanner
-        if (scanner == null) {
-            close()
-            return@callbackFlow
-        }
-
-        val filter = ScanFilter.Builder().setServiceUuid(ParcelUuid(serviceUuid)).build()
-        val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
-
-        val callback = object : ScanCallback() {
-            override fun onScanResult(callbackType: Int, result: ScanResult) {
-                trySend(result.device)
+    fun scanForServices(serviceUuids: List<UUID> = BleServiceUuids.ATHLETIC_SERVICES): Flow<DiscoveredAthleticDevice> =
+        callbackFlow {
+            val bluetoothManager = context.getSystemService(BluetoothManager::class.java)
+            val scanner = bluetoothManager?.adapter?.bluetoothLeScanner
+            if (scanner == null) {
+                close()
+                return@callbackFlow
             }
-        }
 
-        scanner.startScan(listOf(filter), settings, callback)
-        awaitClose { scanner.stopScan(callback) }
-    }.distinctUntilChanged { old, new -> old.address == new.address }
+            val filters = serviceUuids.map { ScanFilter.Builder().setServiceUuid(ParcelUuid(it)).build() }
+            val settings = ScanSettings.Builder().setScanMode(ScanSettings.SCAN_MODE_LOW_LATENCY).build()
+
+            val callback = object : ScanCallback() {
+                override fun onScanResult(callbackType: Int, result: ScanResult) {
+                    val advertised = result.scanRecord?.serviceUuids.orEmpty().map { it.uuid }
+                    val labels = serviceUuids.filter { it in advertised }.map { BleServiceUuids.label(it) }
+                    trySend(DiscoveredAthleticDevice(result.device, labels))
+                }
+            }
+
+            scanner.startScan(filters, settings, callback)
+            awaitClose { scanner.stopScan(callback) }
+        }.distinctUntilChanged { old, new -> old.device.address == new.device.address }
 }

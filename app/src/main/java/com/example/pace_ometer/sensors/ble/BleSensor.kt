@@ -29,5 +29,27 @@ object BleServiceUuids {
     val RUNNING_SPEED_AND_CADENCE_SERVICE: UUID = UUID.fromString("00001814-0000-1000-8000-00805f9b34fb")
     val RSC_MEASUREMENT: UUID = UUID.fromString("00002A53-0000-1000-8000-00805f9b34fb")
 
+    val CYCLING_SPEED_AND_CADENCE_SERVICE: UUID = UUID.fromString("00001816-0000-1000-8000-00805f9b34fb")
+    val CYCLING_POWER_SERVICE: UUID = UUID.fromString("00001818-0000-1000-8000-00805f9b34fb")
+    val FITNESS_MACHINE_SERVICE: UUID = UUID.fromString("00001826-0000-1000-8000-00805f9b34fb")
+
     val CLIENT_CHARACTERISTIC_CONFIG: UUID = UUID.fromString("00002902-0000-1000-8000-00805f9b34fb")
+
+    /** Every standard BLE service this app can recognize when scanning for nearby athletic sensors. */
+    val ATHLETIC_SERVICES: List<UUID> = listOf(
+        HEART_RATE_SERVICE,
+        RUNNING_SPEED_AND_CADENCE_SERVICE,
+        CYCLING_SPEED_AND_CADENCE_SERVICE,
+        CYCLING_POWER_SERVICE,
+        FITNESS_MACHINE_SERVICE
+    )
+
+    fun label(uuid: UUID): String = when (uuid) {
+        HEART_RATE_SERVICE -> "Heart rate"
+        RUNNING_SPEED_AND_CADENCE_SERVICE -> "Running cadence"
+        CYCLING_SPEED_AND_CADENCE_SERVICE -> "Cycling speed/cadence"
+        CYCLING_POWER_SERVICE -> "Cycling power"
+        FITNESS_MACHINE_SERVICE -> "Fitness machine"
+        else -> "Unknown"
+    }
 }
