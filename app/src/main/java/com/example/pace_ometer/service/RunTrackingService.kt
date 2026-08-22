@@ -264,8 +264,16 @@ class RunTrackingService : Service() {
                     val now = android.os.SystemClock.elapsedRealtime()
                     val delta = now - lastTickElapsedRealtime
                     lastTickElapsedRealtime = now
-                    _runState.value = _runState.value.copy(
-                        movingDurationMs = _runState.value.movingDurationMs + delta
+                    val state = _runState.value
+                    // Accumulate calories every second from the current pace, so both the on-screen
+                    // total and the announced total stay continuously in sync (no separate per-segment calc).
+                    val speedKmh = state.currentPaceSecPerKm?.takeIf { it > 0 }?.let { 3600.0 / it } ?: 0.0
+                    val caloriesIncrement = CalorieEstimator.estimateSegmentCalories(
+                        speedKmh, currentSettings.bodyWeightKg.toDouble(), delta
+                    )
+                    _runState.value = state.copy(
+                        movingDurationMs = state.movingDurationMs + delta,
+                        caloriesBurned = state.caloriesBurned + caloriesIncrement
                     )
                     updateNotification()
                 }
@@ -303,20 +311,29 @@ class RunTrackingService : Service() {
             lastElevationMeters = fused.elevationMeters
         }
 
-        var newState = state.copy(
+        // Live pace over the segment in progress (since the last announcement, or run start) --
+        // distinct from fused.instantaneousPaceSecPerKm, which is the continuously smoothed
+        // "projected" pace used for the split-pace display/announcement.
+        val segmentDurationMs = (fused.timestampMs - segmentStartTimeMs).coerceAtLeast(0)
+        val segmentDistanceMeters = (fused.cumulativeDistanceMeters - segmentStartDistanceMeters).coerceAtLeast(0.0)
+        val liveSegmentPace = if (segmentDistanceMeters > 0 && segmentDurationMs > 0) {
+            (segmentDurationMs / 1000.0) / (segmentDistanceMeters / 1000.0)
+        } else null
+
+        val newState = state.copy(
             distanceMeters = fused.cumulativeDistanceMeters,
             currentPaceSecPerKm = fused.instantaneousPaceSecPerKm,
+            segmentPaceSecPerKm = liveSegmentPace,
             elevationMeters = fused.elevationMeters ?: state.elevationMeters,
             elevationGainMeters = gain,
             elevationLossMeters = loss
         )
+        _runState.value = newState
 
         val scheduler = announcementScheduler
         if (scheduler != null && scheduler.checkAndAdvance(fused.cumulativeDistanceMeters)) {
-            newState = newState.copy(caloriesBurned = newState.caloriesBurned + announceSegment(fused, newState))
+            announceSegment(fused, newState)
         }
-
-        _runState.value = newState
 
         serviceScope.launch {
             runRepository.addSample(
@@ -335,26 +352,15 @@ class RunTrackingService : Service() {
         }
     }
 
-    /** Builds and speaks one announcement for the segment ending at [fused], returning its calorie contribution. */
-    private fun announceSegment(fused: FusedPoint, state: RunState): Double {
+    /** Builds and speaks one announcement for the segment ending at [fused], and records its elevation change. */
+    private fun announceSegment(fused: FusedPoint, state: RunState) {
         val now = fused.timestampMs
-        val segmentDurationMs = (now - segmentStartTimeMs).coerceAtLeast(0)
-        val segmentDistanceMeters = (fused.cumulativeDistanceMeters - segmentStartDistanceMeters).coerceAtLeast(0.0)
-
-        val segmentPaceSecPerKm = if (segmentDistanceMeters > 0 && segmentDurationMs > 0) {
-            (segmentDurationMs / 1000.0) / (segmentDistanceMeters / 1000.0)
-        } else null
 
         val elevationChange = if (fused.elevationMeters != null && segmentStartElevationMeters != null) {
             fused.elevationMeters - segmentStartElevationMeters!!
         } else null
 
-        val speedKmh = if (segmentDurationMs > 0) {
-            (segmentDistanceMeters / 1000.0) / (segmentDurationMs / 3_600_000.0)
-        } else 0.0
-        val caloriesIncrement = CalorieEstimator.estimateSegmentCalories(
-            speedKmh, currentSettings.bodyWeightKg.toDouble(), segmentDurationMs
-        )
+        _runState.value = _runState.value.copy(elevationChangeLastSegmentMeters = elevationChange)
 
         val snapshot = AnnouncementSnapshot(
             distanceMeters = fused.cumulativeDistanceMeters,
@@ -363,9 +369,9 @@ class RunTrackingService : Service() {
             elevationChangeLastSegmentMeters = elevationChange,
             heartRateBpm = state.heartRateBpm,
             cadenceSpm = state.cadenceSpm,
-            segmentPaceSecPerKm = segmentPaceSecPerKm,
+            segmentPaceSecPerKm = state.segmentPaceSecPerKm,
             splitPaceSecPerKm = fused.instantaneousPaceSecPerKm,
-            cumulativeCalories = state.caloriesBurned + caloriesIncrement,
+            cumulativeCalories = state.caloriesBurned,
             clockTimeEpochMs = System.currentTimeMillis()
         )
         ttsAnnouncer?.speakAll(AnnouncementContentBuilder.build(currentSettings, snapshot))
@@ -373,8 +379,6 @@ class RunTrackingService : Service() {
         segmentStartTimeMs = now
         segmentStartDistanceMeters = fused.cumulativeDistanceMeters
         segmentStartElevationMeters = fused.elevationMeters ?: segmentStartElevationMeters
-
-        return caloriesIncrement
     }
 
     private fun updateNotification() {

@@ -6,9 +6,12 @@ import androidx.lifecycle.viewModelScope
 import com.example.pace_ometer.PaceometerApp
 import com.example.pace_ometer.data.repository.PersonalRecordRepository
 import com.example.pace_ometer.data.repository.RunRepository
+import com.example.pace_ometer.data.settings.UserSettings
 import com.example.pace_ometer.service.RunServiceConnection
 import com.example.pace_ometer.service.RunState
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class ActiveRunViewModel(application: Application) : AndroidViewModel(application) {
@@ -19,6 +22,9 @@ class ActiveRunViewModel(application: Application) : AndroidViewModel(applicatio
     private val personalRecordRepository: PersonalRecordRepository = app.personalRecordRepository
 
     val runState: StateFlow<RunState> = connection.runState
+
+    val settings: StateFlow<UserSettings> = app.settingsRepository.userSettings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserSettings())
 
     init {
         connection.bind()
