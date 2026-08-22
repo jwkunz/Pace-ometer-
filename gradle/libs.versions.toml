@@ -15,8 +15,10 @@ playServicesLocation = "21.3.0"
 navigationCompose = "2.8.5"
 lifecycleViewmodelCompose = "2.11.0"
 kotlinxCoroutinesPlayServices = "1.9.0"
+desugarJdkLibs = "2.1.4"
 
 [libraries]
+android-desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
 junit = { group = "junit", name = "junit", version.ref = "junit" }
 androidx-junit = { group = "androidx.test.ext", name = "junit", version.ref = "junitVersion" }
