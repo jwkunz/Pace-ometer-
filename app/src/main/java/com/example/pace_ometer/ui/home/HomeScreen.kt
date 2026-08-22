@@ -21,6 +21,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,6 +29,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pace_ometer.ui.common.permissions.rememberPermissionGrantedState
 
 @Composable
@@ -37,10 +39,12 @@ fun HomeScreen(
     onOpenRecords: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenHelp: () -> Unit,
-    onOpenLegal: () -> Unit
+    onOpenLegal: () -> Unit,
+    viewModel: HomeViewModel = viewModel()
 ) {
     val context = LocalContext.current
     var showBackgroundLocationRationale by remember { mutableStateOf(false) }
+    val runState by viewModel.runState.collectAsState()
 
     val notificationsGranted = if (Build.VERSION.SDK_INT >= 33) {
         rememberPermissionGrantedState(Manifest.permission.POST_NOTIFICATIONS).value
@@ -68,7 +72,11 @@ fun HomeScreen(
         ) {
             Text("Ready to run?", style = MaterialTheme.typography.headlineSmall)
 
-            if (!notificationsGranted) {
+            if (runState.isActive) {
+                Button(onClick = onStartRun, modifier = Modifier.fillMaxWidth()) {
+                    Text("View Current Run")
+                }
+            } else if (!notificationsGranted) {
                 PermissionPrompt(
                     message = "Allow notifications so you can see live run status.",
                     buttonLabel = "Allow notifications"
