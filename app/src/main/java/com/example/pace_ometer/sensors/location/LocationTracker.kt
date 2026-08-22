@@ -2,6 +2,7 @@ package com.example.pace_ometer.sensors.location
 
 import android.annotation.SuppressLint
 import android.location.Location
+import android.os.Looper
 import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
@@ -30,7 +31,9 @@ class LocationTracker(private val fusedClient: FusedLocationProviderClient) {
             }
         }
 
-        fusedClient.requestLocationUpdates(request, callback, null)
+        // The calling coroutine may run on a Dispatchers.Default worker thread, which has no
+        // Looper of its own -- deliver callbacks on the main looper explicitly instead.
+        fusedClient.requestLocationUpdates(request, callback, Looper.getMainLooper())
 
         awaitClose { fusedClient.removeLocationUpdates(callback) }
     }

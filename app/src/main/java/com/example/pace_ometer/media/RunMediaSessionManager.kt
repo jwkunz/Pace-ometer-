@@ -2,6 +2,7 @@ package com.example.pace_ometer.media
 
 import android.content.Context
 import android.os.Looper
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.SimpleBasePlayer
 import androidx.media3.session.MediaSession
@@ -45,6 +46,13 @@ class RunMediaSessionManager(
 
         private var playWhenReady = true
 
+        // SimpleBasePlayer requires a non-empty playlist whenever the playback state isn't
+        // IDLE/ENDED; this run "session" isn't really playing media, so a single placeholder
+        // item is enough to satisfy that and let the media button routing work.
+        private val runMediaItem = MediaItemData.Builder("pace-ometer-run")
+            .setMediaItem(MediaItem.Builder().setMediaId("pace-ometer-run").build())
+            .build()
+
         override fun getState(): State =
             State.Builder()
                 .setAvailableCommands(
@@ -54,6 +62,8 @@ class RunMediaSessionManager(
                 )
                 .setPlaybackState(Player.STATE_READY)
                 .setPlayWhenReady(playWhenReady, Player.PLAY_WHEN_READY_CHANGE_REASON_USER_REQUEST)
+                .setPlaylist(listOf(runMediaItem))
+                .setCurrentMediaItemIndex(0)
                 .build()
 
         override fun handleSetPlayWhenReady(playWhenReady: Boolean): ListenableFuture<*> {

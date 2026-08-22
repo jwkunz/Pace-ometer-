@@ -125,7 +125,16 @@ private fun RunMap(points: List<GeoPoint>) {
             val polyline = Polyline().apply { setPoints(points) }
             mapView.overlays.add(polyline)
             val boundingBox = org.osmdroid.util.BoundingBox.fromGeoPoints(points)
-            mapView.post { mapView.zoomToBoundingBox(boundingBox, false, 50) }
+            mapView.post {
+                mapView.zoomToBoundingBox(boundingBox, false, 50)
+                // A near-zero-area box (e.g. a run that barely moved) makes zoomToBoundingBox
+                // compute a zoom level far past what the tile source actually serves, so every
+                // tile request fails outright -- clamp back to a sane maximum.
+                val maxSupportedZoom = mapView.tileProvider.tileSource.maximumZoomLevel.toDouble()
+                if (mapView.zoomLevelDouble > maxSupportedZoom) {
+                    mapView.controller.setZoom(maxSupportedZoom)
+                }
+            }
             mapView.invalidate()
         }
     )

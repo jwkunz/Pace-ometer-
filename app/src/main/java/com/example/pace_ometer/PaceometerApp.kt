@@ -1,6 +1,7 @@
 package com.example.pace_ometer
 
 import android.app.Application
+import android.preference.PreferenceManager
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.room.Room
 import com.example.pace_ometer.data.db.PaceometerDatabase
@@ -39,8 +40,14 @@ class PaceometerApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        // osmdroid requires a distinct user agent and a configured cache dir before first use.
-        Configuration.getInstance().userAgentValue = packageName
+        // osmdroid must be initialized via load() (which wires up its internal Context
+        // reference for path resolution) before any per-field overrides are set, or its
+        // tile providers silently fail to construct.
+        Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
+        // OSM's default tile server actively blocks the "com.example.*" placeholder package
+        // name (it's a well-known abused default), so this must be a distinctive value rather
+        // than the literal applicationId.
+        Configuration.getInstance().userAgentValue = "Pace-ometer-personal-running-app"
         Configuration.getInstance().osmdroidTileCache = java.io.File(cacheDir, "osmdroid")
     }
 }
