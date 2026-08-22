@@ -7,7 +7,9 @@ import kotlinx.serialization.json.Json
 
 class RunJsonExporter(private val runRepository: RunRepository) {
 
-    private val json = Json { prettyPrint = true }
+    // encodeDefaults must be on, or exportSchemaVersion (currently always its default of 1)
+    // would be silently omitted from every export -- defeating the point of a version field.
+    private val json = Json { prettyPrint = true; encodeDefaults = true }
 
     suspend fun exportSavedRuns(): String {
         val runs = runRepository.getSavedRuns()
