@@ -1,0 +1,68 @@
+package com.example.pace_ometer.tts
+
+import com.example.pace_ometer.data.settings.UserSettings
+import com.example.pace_ometer.util.formatDistanceMeters
+import com.example.pace_ometer.util.formatDurationMs
+import com.example.pace_ometer.util.formatElevationMeters
+import com.example.pace_ometer.util.formatPaceSecPerKm
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import kotlin.math.roundToInt
+
+data class AnnouncementSnapshot(
+    val distanceMeters: Double,
+    val elapsedDurationMs: Long,
+    val elevationMeters: Double?,
+    val elevationChangeLastSegmentMeters: Double?,
+    val heartRateBpm: Int?,
+    val cadenceSpm: Int?,
+    val segmentPaceSecPerKm: Double?,
+    val splitPaceSecPerKm: Double?,
+    val cumulativeCalories: Double?,
+    val clockTimeEpochMs: Long
+)
+
+/** Assembles the spoken phrases for one announcement, in a fixed order, honoring per-item toggles. */
+object AnnouncementContentBuilder {
+
+    fun build(settings: UserSettings, snapshot: AnnouncementSnapshot): List<String> {
+        val phrases = mutableListOf<String>()
+        val unit = settings.unitSystem
+
+        if (settings.announceDistance) {
+            phrases += "Distance: ${formatDistanceMeters(snapshot.distanceMeters, unit)}"
+        }
+        if (settings.announceElapsedTime) {
+            phrases += "Time: ${formatDurationMs(snapshot.elapsedDurationMs)}"
+        }
+        if (settings.announceSegmentPace) {
+            phrases += "Current pace: ${formatPaceSecPerKm(snapshot.segmentPaceSecPerKm, unit)}"
+        }
+        if (settings.announceSplitPace) {
+            phrases += "Projected split pace: ${formatPaceSecPerKm(snapshot.splitPaceSecPerKm, unit)}"
+        }
+        if (settings.announceElevation && snapshot.elevationMeters != null) {
+            phrases += "Elevation: ${formatElevationMeters(snapshot.elevationMeters, unit)}"
+        }
+        if (settings.announceElevationChangeLastSegment && snapshot.elevationChangeLastSegmentMeters != null) {
+            val change = snapshot.elevationChangeLastSegmentMeters
+            val direction = if (change >= 0) "up" else "down"
+            phrases += "Last segment: $direction ${formatElevationMeters(kotlin.math.abs(change), unit)}"
+        }
+        if (settings.announceHeartRate && snapshot.heartRateBpm != null) {
+            phrases += "Heart rate: ${snapshot.heartRateBpm} beats per minute"
+        }
+        if (settings.announceCadence && snapshot.cadenceSpm != null) {
+            phrases += "Cadence: ${snapshot.cadenceSpm} steps per minute"
+        }
+        if (settings.announceCalories && snapshot.cumulativeCalories != null) {
+            phrases += "Calories: ${snapshot.cumulativeCalories.roundToInt()}"
+        }
+        if (settings.announceClockTime) {
+            val formatted = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date(snapshot.clockTimeEpochMs))
+            phrases += "Time now: $formatted"
+        }
+        return phrases
+    }
+}

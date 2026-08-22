@@ -7,6 +7,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,6 +24,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -37,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pace_ometer.data.settings.UnitSystem
+import com.example.pace_ometer.data.settings.UserSettings
 import com.example.pace_ometer.sensors.ble.BleDeviceScanner
 import com.example.pace_ometer.sensors.ble.BleServiceUuids
 import com.example.pace_ometer.ui.common.permissions.isPermissionGranted
@@ -111,6 +114,69 @@ fun SettingsScreen(
                 onDeviceSelected = { viewModel.updateHeartRateDeviceAddress(it) },
                 onForget = { viewModel.updateHeartRateDeviceAddress(null) }
             )
+
+            Text("Voice announcements", style = MaterialTheme.typography.titleSmall)
+            VoiceAnnouncementSection(settings = settings, viewModel = viewModel)
+        }
+    }
+}
+
+private data class AnnouncementToggle(
+    val label: String,
+    val isEnabled: (UserSettings) -> Boolean,
+    val setEnabled: (UserSettings, Boolean) -> UserSettings
+)
+
+private val announcementToggles = listOf(
+    AnnouncementToggle("Distance", { it.announceDistance }, { s, v -> s.copy(announceDistance = v) }),
+    AnnouncementToggle("Elapsed time", { it.announceElapsedTime }, { s, v -> s.copy(announceElapsedTime = v) }),
+    AnnouncementToggle("Current segment pace", { it.announceSegmentPace }, { s, v -> s.copy(announceSegmentPace = v) }),
+    AnnouncementToggle("Split (projected) pace", { it.announceSplitPace }, { s, v -> s.copy(announceSplitPace = v) }),
+    AnnouncementToggle("Elevation", { it.announceElevation }, { s, v -> s.copy(announceElevation = v) }),
+    AnnouncementToggle(
+        "Last segment elevation change",
+        { it.announceElevationChangeLastSegment },
+        { s, v -> s.copy(announceElevationChangeLastSegment = v) }
+    ),
+    AnnouncementToggle("Heart rate", { it.announceHeartRate }, { s, v -> s.copy(announceHeartRate = v) }),
+    AnnouncementToggle("Cadence", { it.announceCadence }, { s, v -> s.copy(announceCadence = v) }),
+    AnnouncementToggle("Calories burned", { it.announceCalories }, { s, v -> s.copy(announceCalories = v) }),
+    AnnouncementToggle("Current clock time", { it.announceClockTime }, { s, v -> s.copy(announceClockTime = v) })
+)
+
+@Composable
+private fun VoiceAnnouncementSection(settings: UserSettings, viewModel: SettingsViewModel) {
+    var intervalText by remember(settings.announcementIntervalValue) {
+        mutableStateOf(settings.announcementIntervalValue.toString())
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        val intervalUnitLabel = if (settings.unitSystem == UnitSystem.IMPERIAL) "mi" else "km"
+        OutlinedTextField(
+            value = intervalText,
+            onValueChange = {
+                intervalText = it
+                it.toFloatOrNull()?.let { value ->
+                    viewModel.updateAnnouncementInterval(value, settings.unitSystem)
+                }
+            },
+            label = { Text("Announce every ($intervalUnitLabel)") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        announcementToggles.forEach { toggle ->
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(toggle.label, style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = toggle.isEnabled(settings),
+                    onCheckedChange = { checked ->
+                        viewModel.updateAnnouncementToggle { toggle.setEnabled(it, checked) }
+                    }
+                )
+            }
         }
     }
 }

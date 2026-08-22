@@ -10,15 +10,23 @@ import android.os.Binder
 import android.os.IBinder
 import androidx.core.content.ContextCompat
 import com.example.pace_ometer.PaceometerApp
+import com.example.pace_ometer.calories.CalorieEstimator
 import com.example.pace_ometer.data.db.entity.RunSampleEntity
 import com.example.pace_ometer.data.repository.RunRepository
 import com.example.pace_ometer.data.settings.SettingsRepository
+import com.example.pace_ometer.data.settings.UnitSystem
+import com.example.pace_ometer.data.settings.UserSettings
+import com.example.pace_ometer.media.RunMediaSessionManager
 import com.example.pace_ometer.sensors.ble.HeartRateGattSensor
 import com.example.pace_ometer.sensors.fusion.DistanceFusionEngine
 import com.example.pace_ometer.sensors.fusion.FusedPoint
 import com.example.pace_ometer.sensors.fusion.GpsFix
 import com.example.pace_ometer.sensors.location.LocationTracker
 import com.example.pace_ometer.sensors.motion.StepDetector
+import com.example.pace_ometer.tts.AnnouncementContentBuilder
+import com.example.pace_ometer.tts.AnnouncementScheduler
+import com.example.pace_ometer.tts.AnnouncementSnapshot
+import com.example.pace_ometer.tts.TtsAnnouncer
 import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
 import com.google.android.gms.location.LocationServices
@@ -69,6 +77,14 @@ class RunTrackingService : Service() {
     private var heartRateCount: Int = 0
     private var heartRateMax: Int? = null
 
+    private var currentSettings: UserSettings = UserSettings()
+    private var ttsAnnouncer: TtsAnnouncer? = null
+    private var mediaSessionManager: RunMediaSessionManager? = null
+    private var announcementScheduler: AnnouncementScheduler? = null
+    private var segmentStartTimeMs: Long = 0
+    private var segmentStartDistanceMeters: Double = 0.0
+    private var segmentStartElevationMeters: Double? = null
+
     override fun onCreate() {
         super.onCreate()
         val app = application as PaceometerApp
@@ -106,6 +122,19 @@ class RunTrackingService : Service() {
             heartRateSum = 0
             heartRateCount = 0
             heartRateMax = null
+            currentSettings = settings
+            segmentStartTimeMs = System.currentTimeMillis()
+            segmentStartDistanceMeters = 0.0
+            segmentStartElevationMeters = null
+            val intervalMeters = settings.announcementIntervalValue *
+                if (settings.announcementIntervalUnit == UnitSystem.IMPERIAL) 1609.344 else 1000.0
+            announcementScheduler = AnnouncementScheduler(intervalMeters)
+            ttsAnnouncer = TtsAnnouncer(this@RunTrackingService)
+            mediaSessionManager = RunMediaSessionManager(
+                context = this@RunTrackingService,
+                onPlay = { resumeRun() },
+                onPause = { pauseRun() }
+            ).also { it.start() }
             lastTickElapsedRealtime = android.os.SystemClock.elapsedRealtime()
             startForeground(
                 RunNotificationFactory.NOTIFICATION_ID,
@@ -121,6 +150,7 @@ class RunTrackingService : Service() {
     private fun pauseRun() {
         if (_runState.value.phase != RunPhase.RUNNING) return
         _runState.value = _runState.value.copy(phase = RunPhase.PAUSED)
+        mediaSessionManager?.setPlaying(false)
         updateNotification()
     }
 
@@ -128,6 +158,7 @@ class RunTrackingService : Service() {
         if (_runState.value.phase != RunPhase.PAUSED) return
         lastTickElapsedRealtime = android.os.SystemClock.elapsedRealtime()
         _runState.value = _runState.value.copy(phase = RunPhase.RUNNING)
+        mediaSessionManager?.setPlaying(true)
         updateNotification()
     }
 
@@ -143,6 +174,11 @@ class RunTrackingService : Service() {
         tickerJob?.cancel()
         heartRateSensor?.disconnect()
         heartRateSensor = null
+        ttsAnnouncer?.shutdown()
+        ttsAnnouncer = null
+        mediaSessionManager?.stop()
+        mediaSessionManager = null
+        announcementScheduler = null
         serviceScope.launch {
             val run = runRepository.getRun(state.runId)
             if (run != null) {
@@ -160,7 +196,8 @@ class RunTrackingService : Service() {
                         elevationGainMeters = state.elevationGainMeters,
                         elevationLossMeters = state.elevationLossMeters,
                         avgHeartRateBpm = if (heartRateCount > 0) (heartRateSum / heartRateCount).toInt() else null,
-                        maxHeartRateBpm = heartRateMax
+                        maxHeartRateBpm = heartRateMax,
+                        estimatedCalories = state.caloriesBurned
                     )
                 )
             }
@@ -266,13 +303,20 @@ class RunTrackingService : Service() {
             lastElevationMeters = fused.elevationMeters
         }
 
-        _runState.value = state.copy(
+        var newState = state.copy(
             distanceMeters = fused.cumulativeDistanceMeters,
             currentPaceSecPerKm = fused.instantaneousPaceSecPerKm,
             elevationMeters = fused.elevationMeters ?: state.elevationMeters,
             elevationGainMeters = gain,
             elevationLossMeters = loss
         )
+
+        val scheduler = announcementScheduler
+        if (scheduler != null && scheduler.checkAndAdvance(fused.cumulativeDistanceMeters)) {
+            newState = newState.copy(caloriesBurned = newState.caloriesBurned + announceSegment(fused, newState))
+        }
+
+        _runState.value = newState
 
         serviceScope.launch {
             runRepository.addSample(
@@ -289,6 +333,48 @@ class RunTrackingService : Service() {
                 )
             )
         }
+    }
+
+    /** Builds and speaks one announcement for the segment ending at [fused], returning its calorie contribution. */
+    private fun announceSegment(fused: FusedPoint, state: RunState): Double {
+        val now = fused.timestampMs
+        val segmentDurationMs = (now - segmentStartTimeMs).coerceAtLeast(0)
+        val segmentDistanceMeters = (fused.cumulativeDistanceMeters - segmentStartDistanceMeters).coerceAtLeast(0.0)
+
+        val segmentPaceSecPerKm = if (segmentDistanceMeters > 0 && segmentDurationMs > 0) {
+            (segmentDurationMs / 1000.0) / (segmentDistanceMeters / 1000.0)
+        } else null
+
+        val elevationChange = if (fused.elevationMeters != null && segmentStartElevationMeters != null) {
+            fused.elevationMeters - segmentStartElevationMeters!!
+        } else null
+
+        val speedKmh = if (segmentDurationMs > 0) {
+            (segmentDistanceMeters / 1000.0) / (segmentDurationMs / 3_600_000.0)
+        } else 0.0
+        val caloriesIncrement = CalorieEstimator.estimateSegmentCalories(
+            speedKmh, currentSettings.bodyWeightKg.toDouble(), segmentDurationMs
+        )
+
+        val snapshot = AnnouncementSnapshot(
+            distanceMeters = fused.cumulativeDistanceMeters,
+            elapsedDurationMs = state.movingDurationMs,
+            elevationMeters = fused.elevationMeters,
+            elevationChangeLastSegmentMeters = elevationChange,
+            heartRateBpm = state.heartRateBpm,
+            cadenceSpm = state.cadenceSpm,
+            segmentPaceSecPerKm = segmentPaceSecPerKm,
+            splitPaceSecPerKm = fused.instantaneousPaceSecPerKm,
+            cumulativeCalories = state.caloriesBurned + caloriesIncrement,
+            clockTimeEpochMs = System.currentTimeMillis()
+        )
+        ttsAnnouncer?.speakAll(AnnouncementContentBuilder.build(currentSettings, snapshot))
+
+        segmentStartTimeMs = now
+        segmentStartDistanceMeters = fused.cumulativeDistanceMeters
+        segmentStartElevationMeters = fused.elevationMeters ?: segmentStartElevationMeters
+
+        return caloriesIncrement
     }
 
     private fun updateNotification() {

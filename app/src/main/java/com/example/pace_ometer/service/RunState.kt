@@ -12,5 +12,6 @@ data class RunState(
     val elevationLossMeters: Double = 0.0,
     val currentPaceSecPerKm: Double? = null,
     val heartRateBpm: Int? = null,
-    val cadenceSpm: Int? = null
+    val cadenceSpm: Int? = null,
+    val caloriesBurned: Double = 0.0
 )

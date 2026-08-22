@@ -52,6 +52,9 @@ fun ActiveRunScreen(
                 "Pace: ${formatPaceSecPerKm(state.currentPaceSecPerKm)}",
                 style = MaterialTheme.typography.bodyLarge
             )
+            state.heartRateBpm?.let {
+                Text("Heart rate: $it bpm", style = MaterialTheme.typography.bodyLarge)
+            }
 
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
                 when (state.phase) {

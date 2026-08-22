@@ -32,6 +32,15 @@ fun kgToDisplayWeight(kg: Float, unitSystem: UnitSystem): Float =
 fun displayWeightToKg(value: Float, unitSystem: UnitSystem): Float =
     if (unitSystem == UnitSystem.IMPERIAL) value / 2.20462f else value
 
+fun metersToDisplayElevation(meters: Double, unitSystem: UnitSystem): Double =
+    if (unitSystem == UnitSystem.IMPERIAL) meters * 3.28084 else meters
+
+fun formatElevationMeters(meters: Double, unitSystem: UnitSystem = UnitSystem.METRIC): String {
+    val value = metersToDisplayElevation(meters, unitSystem)
+    val unit = if (unitSystem == UnitSystem.IMPERIAL) "ft" else "m"
+    return "%.0f %s".format(value, unit)
+}
+
 fun cmToDisplayHeight(cm: Float, unitSystem: UnitSystem): Float =
     if (unitSystem == UnitSystem.IMPERIAL) cm / 2.54f else cm
 

@@ -34,4 +34,12 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
     fun updateHeartRateDeviceAddress(address: String?) {
         viewModelScope.launch { settingsRepository.updateHeartRateDeviceAddress(address) }
     }
+
+    fun updateAnnouncementInterval(value: Float, unit: UnitSystem) {
+        viewModelScope.launch { settingsRepository.updateAnnouncementInterval(value, unit) }
+    }
+
+    fun updateAnnouncementToggle(update: (UserSettings) -> UserSettings) {
+        viewModelScope.launch { settingsRepository.updateAnnouncementToggles(update) }
+    }
 }
