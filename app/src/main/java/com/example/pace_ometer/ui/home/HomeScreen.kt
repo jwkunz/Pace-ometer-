@@ -38,6 +38,7 @@ import com.example.pace_ometer.ui.common.permissions.rememberPermissionGrantedSt
 fun HomeScreen(
     onStartRun: () -> Unit,
     onOpenHistory: () -> Unit,
+    onOpenRecords: () -> Unit,
     onOpenSettings: () -> Unit,
     onOpenHelp: () -> Unit,
     onOpenLegal: () -> Unit
@@ -69,6 +70,7 @@ fun HomeScreen(
                         Icon(painter = androidx.compose.ui.res.painterResource(com.example.pace_ometer.R.drawable.ic_account_box), contentDescription = "Menu")
                     }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        DropdownMenuItem(text = { Text("Personal Records") }, onClick = { menuExpanded = false; onOpenRecords() })
                         DropdownMenuItem(text = { Text("Settings") }, onClick = { menuExpanded = false; onOpenSettings() })
                         DropdownMenuItem(text = { Text("Help") }, onClick = { menuExpanded = false; onOpenHelp() })
                         DropdownMenuItem(text = { Text("Legal") }, onClick = { menuExpanded = false; onOpenLegal() })

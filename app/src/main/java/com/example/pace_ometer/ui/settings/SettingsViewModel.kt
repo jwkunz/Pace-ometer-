@@ -4,6 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pace_ometer.PaceometerApp
+import com.example.pace_ometer.data.db.entity.SeasonEntity
+import com.example.pace_ometer.data.repository.SeasonRepository
 import com.example.pace_ometer.data.settings.SettingsRepository
 import com.example.pace_ometer.data.settings.UnitSystem
 import com.example.pace_ometer.data.settings.UserSettings
@@ -14,10 +16,23 @@ import kotlinx.coroutines.launch
 
 class SettingsViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val settingsRepository: SettingsRepository = (application as PaceometerApp).settingsRepository
+    private val app: PaceometerApp = application as PaceometerApp
+    private val settingsRepository: SettingsRepository = app.settingsRepository
+    private val seasonRepository: SeasonRepository = app.seasonRepository
 
     val settings: StateFlow<UserSettings> = settingsRepository.userSettings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), UserSettings())
+
+    val seasons: StateFlow<List<SeasonEntity>> = seasonRepository.observeSeasons()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun addSeason(name: String, startEpochMs: Long) {
+        viewModelScope.launch { seasonRepository.addSeason(name, startEpochMs) }
+    }
+
+    fun deleteSeason(season: SeasonEntity) {
+        viewModelScope.launch { seasonRepository.deleteSeason(season) }
+    }
 
     fun updateUnitSystem(unitSystem: UnitSystem) {
         viewModelScope.launch { settingsRepository.updateUnitSystem(unitSystem) }

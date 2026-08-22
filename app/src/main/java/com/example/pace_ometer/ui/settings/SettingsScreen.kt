@@ -117,7 +117,92 @@ fun SettingsScreen(
 
             Text("Voice announcements", style = MaterialTheme.typography.titleSmall)
             VoiceAnnouncementSection(settings = settings, viewModel = viewModel)
+
+            Text("Seasons", style = MaterialTheme.typography.titleSmall)
+            SeasonSection(viewModel = viewModel)
         }
+    }
+}
+
+@Composable
+private fun SeasonSection(viewModel: SettingsViewModel) {
+    val seasons by viewModel.seasons.collectAsState()
+    var showAddDialog by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            "Seasons let personal records be tracked separately per time period, in addition to all-time.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        seasons.forEach { season ->
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "${season.name} (from ${
+                        java.text.DateFormat.getDateInstance().format(java.util.Date(season.startEpochMs))
+                    })"
+                )
+                TextButton(onClick = { viewModel.deleteSeason(season) }) { Text("Delete") }
+            }
+        }
+        OutlinedButton(onClick = { showAddDialog = true }) { Text("Add season") }
+    }
+
+    if (showAddDialog) {
+        AddSeasonDialog(
+            onDismiss = { showAddDialog = false },
+            onAdd = { name, startEpochMs ->
+                viewModel.addSeason(name, startEpochMs)
+                showAddDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+private fun AddSeasonDialog(onDismiss: () -> Unit, onAdd: (String, Long) -> Unit) {
+    var name by remember { mutableStateOf("") }
+    var startEpochDay by remember { mutableStateOf<Long?>(null) }
+    var showDatePicker by remember { mutableStateOf(false) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add season") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(value = name, onValueChange = { name = it }, label = { Text("Name") })
+                OutlinedButton(onClick = { showDatePicker = true }) {
+                    Text(
+                        startEpochDay?.let {
+                            java.text.DateFormat.getDateInstance().format(java.util.Date(it * 86_400_000L))
+                        } ?: "Select start date"
+                    )
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                onClick = { startEpochDay?.let { onAdd(name.ifBlank { "Season" }, it * 86_400_000L) } },
+                enabled = startEpochDay != null
+            ) { Text("Add") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } }
+    )
+
+    if (showDatePicker) {
+        val datePickerState = androidx.compose.material3.rememberDatePickerState()
+        androidx.compose.material3.DatePickerDialog(
+            onDismissRequest = { showDatePicker = false },
+            confirmButton = {
+                TextButton(onClick = {
+                    datePickerState.selectedDateMillis?.let { startEpochDay = it / 86_400_000L }
+                    showDatePicker = false
+                }) { Text("OK") }
+            },
+            dismissButton = { TextButton(onClick = { showDatePicker = false }) { Text("Cancel") } }
+        ) { androidx.compose.material3.DatePicker(state = datePickerState) }
     }
 }
 

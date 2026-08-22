@@ -45,6 +45,27 @@ private val helpSections = listOf(
             "strap and connect it. Once paired, your live BPM is shown during runs and its average " +
             "and max are saved with each run. A cadence (footpod) sensor isn't supported yet, but " +
             "the app is built to add one without needing to reconnect your other sensors."
+    ),
+    HelpSection(
+        "Voice announcements",
+        "Choose how often (by distance) Pace-ometer speaks a status update during your run, and " +
+            "which facts it includes -- distance, elapsed time, current and projected pace, " +
+            "elevation, heart rate, cadence, calories, and clock time. Only toggled-on items are " +
+            "spoken, and only if the corresponding data is available (e.g. heart rate needs a " +
+            "connected monitor)."
+    ),
+    HelpSection(
+        "Seasons and personal records",
+        "Every run you save is automatically checked against your personal records -- no separate " +
+            "submission step. Records are tracked both All-Time and per season. Add a season in " +
+            "Settings with a name and start date; a run belongs to whichever season most recently " +
+            "started before it. View records for any scope from the Personal Records screen."
+    ),
+    HelpSection(
+        "Exporting your data",
+        "From Run History, tap the export icon to save all of your runs and their sample data as " +
+            "a single JSON file you choose where to save. This is the only way data ever leaves " +
+            "your device -- see Legal for the full privacy notice."
     )
 )
 

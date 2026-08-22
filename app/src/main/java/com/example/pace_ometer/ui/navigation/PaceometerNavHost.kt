@@ -19,6 +19,7 @@ import com.example.pace_ometer.ui.history.HistoryScreen
 import com.example.pace_ometer.ui.home.HomeScreen
 import com.example.pace_ometer.ui.legal.LegalScreen
 import com.example.pace_ometer.ui.onboarding.OnboardingScreen
+import com.example.pace_ometer.ui.records.PersonalRecordsScreen
 import com.example.pace_ometer.ui.settings.SettingsScreen
 import com.example.pace_ometer.ui.summary.RunSummaryScreen
 import kotlinx.coroutines.flow.map
@@ -31,6 +32,7 @@ private object Routes {
     const val SETTINGS = "settings"
     const val HELP = "help"
     const val LEGAL = "legal"
+    const val RECORDS = "records"
     const val RUN_SUMMARY = "run_summary/{runId}"
     fun runSummary(runId: Long) = "run_summary/$runId"
 }
@@ -63,6 +65,7 @@ fun PaceometerNavHost() {
             HomeScreen(
                 onStartRun = { navController.navigate(Routes.ACTIVE_RUN) },
                 onOpenHistory = { navController.navigate(Routes.HISTORY) },
+                onOpenRecords = { navController.navigate(Routes.RECORDS) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onOpenHelp = { navController.navigate(Routes.HELP) },
                 onOpenLegal = { navController.navigate(Routes.LEGAL) }
@@ -83,6 +86,9 @@ fun PaceometerNavHost() {
         ) { backStackEntry ->
             val runId = backStackEntry.arguments?.getLong("runId") ?: return@composable
             RunSummaryScreen(runId = runId, onBack = { navController.popBackStack() })
+        }
+        composable(Routes.RECORDS) {
+            PersonalRecordsScreen(onBack = { navController.popBackStack() })
         }
         composable(Routes.SETTINGS) {
             SettingsScreen(onBack = { navController.popBackStack() })
