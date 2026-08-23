@@ -5,6 +5,30 @@ heart-rate monitoring, spoken (TTS) run announcements, post-run analysis with a 
 personal records, and equipment-usage tracking (e.g. running shoes) — all in a crimson/gold/black
 theme, with no accounts and no cloud.
 
+## Install
+
+Pace-ometer isn't on the Play Store — it's distributed as a signed APK straight from
+[GitHub Releases](https://github.com/jwkunz/Pace-ometer-/releases/latest). No account, no store,
+no review process.
+
+**On your phone:**
+
+1. Open the [latest release](https://github.com/jwkunz/Pace-ometer-/releases/latest) in your
+   phone's browser and download `app-release.apk`.
+2. Tap the downloaded file. Android will ask permission to install from your browser/file manager
+   the first time — this is normal for any app installed outside the Play Store. Allow it.
+3. Tap **Install**. Once it's done, open Pace-ometer and complete the first-launch onboarding.
+
+**Updating later:** repeat the same steps with a newer release's APK — installing over an
+existing copy keeps your local data (runs, records, settings, equipment). If you'd rather not
+check back manually, install [Obtainium](https://github.com/ImranR98/Obtainium) and add this repo
+as a source — it watches GitHub Releases and notifies you when a new version is out.
+
+> **Why the warning when installing?** Android shows an "unknown sources" prompt for any APK not
+> installed via the Play Store, regardless of who built it — it's not specific to this app. The
+> APK is signed with a dedicated release key (see `.github/workflows/release.yml`), so Android
+> will always recognize updates as coming from the same source.
+
 ## Features
 
 - **Run tracking** — start/pause/resume/stop, with a foreground service that keeps tracking
@@ -57,6 +81,25 @@ The debug APK is written to `app/build/outputs/apk/debug/app-debug.apk`. Install
 ```bash
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
+
+## Cutting a release (maintainers)
+
+Releases are built and published automatically by
+[`.github/workflows/release.yml`](.github/workflows/release.yml). Bump `versionCode` and
+`versionName` in `app/build.gradle.kts`, commit, then push a tag matching `v*.*.*`:
+
+```bash
+git tag v1.0.1
+git push origin v1.0.1
+```
+
+That builds a signed release APK and publishes it as a GitHub Release with the APK attached —
+the same link from the [Install](#install) section above. This needs the `RELEASE_KEYSTORE_BASE64`,
+`RELEASE_STORE_PASSWORD`, `RELEASE_KEY_ALIAS`, and `RELEASE_KEY_PASSWORD` repository secrets set,
+matching the release keystore used for local builds (`keystore/pace-ometer-release.jks` +
+`keystore.properties` at the repo root — both gitignored, so keep your own backup).
+**Losing that keystore means future releases can no longer install over copies already on
+people's phones.**
 
 ## Permissions
 
