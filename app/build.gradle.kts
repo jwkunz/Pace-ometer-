@@ -1,9 +1,21 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
 }
+
+// Release signing comes from keystore.properties (local dev, gitignored) or environment
+// variables (CI) -- never hardcoded, and never committed alongside the keystore itself.
+val keystoreProperties = Properties().apply {
+    val propsFile = rootProject.file("keystore.properties")
+    if (propsFile.exists()) propsFile.inputStream().use { load(it) }
+}
+
+fun releaseSigningProp(propertyKey: String, envVar: String): String? =
+    keystoreProperties.getProperty(propertyKey) ?: System.getenv(envVar)
 
 android {
     namespace = "com.example.pace_ometer"
@@ -23,11 +35,21 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            releaseSigningProp("storeFile", "RELEASE_STORE_FILE")?.let { storeFile = rootProject.file(it) }
+            releaseSigningProp("storePassword", "RELEASE_STORE_PASSWORD")?.let { storePassword = it }
+            releaseSigningProp("keyAlias", "RELEASE_KEY_ALIAS")?.let { keyAlias = it }
+            releaseSigningProp("keyPassword", "RELEASE_KEY_PASSWORD")?.let { keyPassword = it }
+        }
+    }
+
     buildTypes {
         release {
             optimization {
                 enable = false
             }
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
