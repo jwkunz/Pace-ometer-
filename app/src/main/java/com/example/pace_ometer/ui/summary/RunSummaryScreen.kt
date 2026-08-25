@@ -83,7 +83,8 @@ fun RunSummaryScreen(
                 points = samples.mapNotNull { s ->
                     s.instantaneousPaceSecPerKm?.let { (s.cumulativeDistanceMeters / 1000f).toFloat() to it.toFloat() }
                 },
-                valueFormatter = { "${it.toInt()}s/km" }
+                valueFormatter = { "${it.toInt()}s/km" },
+                xValueFormatter = { "%.1fkm".format(it) }
             )
 
             LineChart(
@@ -91,7 +92,8 @@ fun RunSummaryScreen(
                 points = samples.mapNotNull { s ->
                     s.elevationMeters?.let { (s.cumulativeDistanceMeters / 1000f).toFloat() to it.toFloat() }
                 },
-                valueFormatter = { "${it.toInt()}m" }
+                valueFormatter = { "${it.toInt()}m" },
+                xValueFormatter = { "%.1fkm".format(it) }
             )
 
             val heartRatePoints = samples.mapNotNull { s ->
@@ -101,7 +103,8 @@ fun RunSummaryScreen(
                 LineChart(
                     title = "Heart rate over time",
                     points = heartRatePoints,
-                    valueFormatter = { "${it.toInt()} bpm" }
+                    valueFormatter = { "${it.toInt()} bpm" },
+                    xValueFormatter = { "%.1fmin".format(it) }
                 )
             }
         }
