@@ -23,6 +23,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import com.example.pace_ometer.PaceometerApp
 import com.example.pace_ometer.ui.common.SimpleViewModelFactory
 import com.example.pace_ometer.ui.common.charts.LineChart
+import com.example.pace_ometer.util.AgeAndHrZoneCalculator
 import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
 import com.example.pace_ometer.util.formatPaceSecPerKm
@@ -44,6 +45,7 @@ fun RunSummaryScreen(
 
     val run by viewModel.run.collectAsState()
     val samples by viewModel.samples.collectAsState()
+    val settings by viewModel.settings.collectAsState()
 
     Scaffold(topBar = { TopAppBar(title = { Text("Run Summary") }) }) { padding ->
         Column(
@@ -60,7 +62,18 @@ fun RunSummaryScreen(
                         Text(formatDistanceMeters(r.totalDistanceMeters), style = MaterialTheme.typography.headlineSmall)
                         Text(formatDurationMs(r.movingDurationMs))
                         Text("Avg pace: ${formatPaceSecPerKm(r.averagePaceSecPerKm)}")
-                        r.avgHeartRateBpm?.let { Text("Avg heart rate: $it bpm (max ${r.maxHeartRateBpm})") }
+                        r.avgHeartRateBpm?.let { avgBpm ->
+                            val birthDateEpochDay = settings.birthDateEpochDay
+                            val zoneSuffix = if (birthDateEpochDay != null) {
+                                val maxHr = AgeAndHrZoneCalculator.estimatedMaxHeartRateBpm(
+                                    AgeAndHrZoneCalculator.ageYears(birthDateEpochDay)
+                                )
+                                val avgZone = AgeAndHrZoneCalculator.zoneFor(avgBpm, maxHr)
+                                val avgEffort = AgeAndHrZoneCalculator.effortPercent(avgBpm, maxHr)
+                                " -- ${avgZone?.let { "Z${it.number}, " } ?: ""}$avgEffort% effort"
+                            } else ""
+                            Text("Avg heart rate: $avgBpm bpm (max ${r.maxHeartRateBpm})$zoneSuffix")
+                        }
                         r.estimatedCalories?.let { Text("Calories: ${it.toInt()}") }
                         r.elevationGainMeters?.let { gain ->
                             Text("Elevation gain/loss: +${gain.toInt()}m / -${(r.elevationLossMeters ?: 0.0).toInt()}m")

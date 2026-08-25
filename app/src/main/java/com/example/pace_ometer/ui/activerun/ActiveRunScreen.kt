@@ -26,8 +26,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pace_ometer.data.settings.UnitSystem
+import com.example.pace_ometer.data.settings.UserSettings
 import com.example.pace_ometer.service.RunPhase
 import com.example.pace_ometer.service.RunState
+import com.example.pace_ometer.util.AgeAndHrZoneCalculator
 import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
 import com.example.pace_ometer.util.formatElevationMeters
@@ -77,7 +79,7 @@ fun ActiveRunScreen(
 
             HorizontalDivider()
 
-            MetricsGrid(state = state, unitSystem = unitSystem)
+            MetricsGrid(state = state, unitSystem = unitSystem, settings = settings)
         }
     }
 
@@ -107,7 +109,7 @@ fun ActiveRunScreen(
  * announcements -- the toggles in Settings only control what gets spoken aloud.
  */
 @Composable
-private fun MetricsGrid(state: RunState, unitSystem: UnitSystem) {
+private fun MetricsGrid(state: RunState, unitSystem: UnitSystem, settings: UserSettings) {
     val clockTime = SimpleDateFormat("h:mm a", Locale.getDefault()).format(Date())
 
     val elevationChangeLabel = state.elevationChangeLastSegmentMeters?.let { change ->
@@ -115,12 +117,27 @@ private fun MetricsGrid(state: RunState, unitSystem: UnitSystem) {
         "$sign${formatElevationMeters(abs(change), unitSystem)}"
     } ?: "--"
 
+    val heartRateLabel = state.heartRateBpm?.let { bpm ->
+        val birthDateEpochDay = settings.birthDateEpochDay
+        if (birthDateEpochDay != null) {
+            val maxHr = AgeAndHrZoneCalculator.estimatedMaxHeartRateBpm(
+                AgeAndHrZoneCalculator.ageYears(birthDateEpochDay)
+            )
+            val effortPercent = AgeAndHrZoneCalculator.effortPercent(bpm, maxHr)
+            val zone = AgeAndHrZoneCalculator.zoneFor(bpm, maxHr)
+            val zoneLabel = zone?.let { "Z${it.number}" } ?: "--"
+            "$bpm bpm ($zoneLabel, $effortPercent%)"
+        } else {
+            "$bpm bpm"
+        }
+    } ?: "--"
+
     val metrics = listOf(
         "Segment pace" to formatPaceSecPerKm(state.segmentPaceSecPerKm, unitSystem),
         "Split (projected) pace" to formatPaceSecPerKm(state.currentPaceSecPerKm, unitSystem),
         "Elevation" to (state.elevationMeters?.let { formatElevationMeters(it, unitSystem) } ?: "--"),
         "Last segment elevation Δ" to elevationChangeLabel,
-        "Heart rate" to (state.heartRateBpm?.let { "$it bpm" } ?: "--"),
+        "Heart rate" to heartRateLabel,
         "Cadence" to (state.cadenceSpm?.let { "$it spm" } ?: "--"),
         "Calories" to "${state.caloriesBurned.roundToInt()} kcal",
         "Clock time" to clockTime
