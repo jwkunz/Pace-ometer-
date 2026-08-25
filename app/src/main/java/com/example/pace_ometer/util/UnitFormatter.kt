@@ -44,6 +44,20 @@ fun formatElevationMeters(meters: Double, unitSystem: UnitSystem = UnitSystem.ME
     return "%.0f %s".format(value, unit)
 }
 
+fun formatStrideLengthMeters(meters: Double, unitSystem: UnitSystem): String {
+    val value = metersToDisplayElevation(meters, unitSystem)
+    val unit = if (unitSystem == UnitSystem.IMPERIAL) "ft" else "m"
+    return "%.2f %s".format(value, unit)
+}
+
+/** Steps per distance unit (e.g. "1780 /mi"), a stride-rate metric independent of pace. */
+fun formatStepsPerDistanceUnit(steps: Int, distanceMeters: Double, unitSystem: UnitSystem): String {
+    if (distanceMeters <= 0) return "--"
+    val distanceInUnit = metersToDisplayUnitDistance(distanceMeters, unitSystem)
+    val unitLabel = if (unitSystem == UnitSystem.IMPERIAL) "mi" else "km"
+    return "%.0f /%s".format(steps / distanceInUnit, unitLabel)
+}
+
 fun cmToDisplayHeight(cm: Float, unitSystem: UnitSystem): Float =
     if (unitSystem == UnitSystem.IMPERIAL) cm / 2.54f else cm
 

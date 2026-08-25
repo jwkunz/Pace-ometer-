@@ -18,6 +18,7 @@ data class RunEntity(
     val maxHeartRateBpm: Int? = null,
     val avgCadenceSpm: Int? = null,
     val estimatedCalories: Double? = null,
+    val stepCount: Int? = null,
     val bodyWeightKgAtRunTime: Double? = null,
     val unitSystemAtRunTime: String = "METRIC",
     val isSaved: Boolean = false,

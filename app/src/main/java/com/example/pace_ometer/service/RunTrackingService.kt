@@ -219,7 +219,8 @@ class RunTrackingService : Service() {
                         elevationLossMeters = state.elevationLossMeters,
                         avgHeartRateBpm = if (heartRateCount > 0) (heartRateSum / heartRateCount).toInt() else null,
                         maxHeartRateBpm = heartRateMax,
-                        estimatedCalories = state.caloriesBurned
+                        estimatedCalories = state.caloriesBurned,
+                        stepCount = state.stepCount
                     )
                 )
             }
@@ -251,6 +252,10 @@ class RunTrackingService : Service() {
                     applyFusedPoint(fused)
                 } else {
                     fusionEngine.onStepDuringGoodGps()
+                    _runState.value = _runState.value.copy(
+                        stepCount = fusionEngine.stepCount,
+                        strideLengthMeters = fusionEngine.currentStrideLengthMeters
+                    )
                 }
             }
         }
@@ -348,7 +353,9 @@ class RunTrackingService : Service() {
             segmentPaceSecPerKm = liveSegmentPace,
             elevationMeters = fused.elevationMeters ?: state.elevationMeters,
             elevationGainMeters = gain,
-            elevationLossMeters = loss
+            elevationLossMeters = loss,
+            stepCount = fusionEngine.stepCount,
+            strideLengthMeters = fusionEngine.currentStrideLengthMeters
         )
         _runState.value = newState
 

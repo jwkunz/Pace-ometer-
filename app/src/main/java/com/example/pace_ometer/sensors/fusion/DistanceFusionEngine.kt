@@ -32,10 +32,12 @@ class DistanceFusionEngine(
 
     private var calibrationDistanceMeters: Double = 0.0
     private var calibrationSteps: Int = 0
+    private var totalSteps: Int = 0
 
     val distanceMeters: Double get() = cumulativeDistanceMeters
     val currentStrideLengthMeters: Double get() = strideLengthMeters
     val lastFixTimestampMs: Long? get() = lastAcceptedFix?.timestampMs
+    val stepCount: Int get() = totalSteps
 
     fun isInGpsGap(nowMs: Long): Boolean {
         val last = lastAcceptedFix?.timestampMs ?: return false
@@ -87,6 +89,7 @@ class DistanceFusionEngine(
 
     /** Feed step events observed while GPS is fresh, to continuously calibrate [strideLengthMeters]. */
     fun onStepDuringGoodGps() {
+        totalSteps += 1
         calibrationSteps += 1
         if (calibrationSteps >= strideCalibrationStepCount && calibrationDistanceMeters > 0) {
             strideLengthMeters = calibrationDistanceMeters / calibrationSteps
@@ -97,6 +100,7 @@ class DistanceFusionEngine(
 
     /** Feed step events while [isInGpsGap] is true, to dead-reckon distance until GPS resumes. */
     fun onStepDetected(stepTimestampMs: Long): FusedPoint {
+        totalSteps += 1
         cumulativeDistanceMeters += strideLengthMeters
         return FusedPoint(
             timestampMs = stepTimestampMs,

@@ -41,6 +41,7 @@ class RunJsonExporter(private val runRepository: RunRepository) {
         maxHeartRateBpm = maxHeartRateBpm,
         avgCadenceSpm = avgCadenceSpm,
         estimatedCalories = estimatedCalories,
+        stepCount = stepCount,
         unitSystemAtRunTime = unitSystemAtRunTime,
         samples = samples.map {
             RunSampleExportEntry(

@@ -34,6 +34,8 @@ import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
 import com.example.pace_ometer.util.formatElevationMeters
 import com.example.pace_ometer.util.formatPaceSecPerKm
+import com.example.pace_ometer.util.formatStepsPerDistanceUnit
+import com.example.pace_ometer.util.formatStrideLengthMeters
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -140,7 +142,15 @@ private fun MetricsGrid(state: RunState, unitSystem: UnitSystem, settings: UserS
         "Heart rate" to heartRateLabel,
         "Cadence" to (state.cadenceSpm?.let { "$it spm" } ?: "--"),
         "Calories" to "${state.caloriesBurned.roundToInt()} kcal",
-        "Clock time" to clockTime
+        "Clock time" to clockTime,
+        "Steps" to (if (state.stepCount > 0) "${state.stepCount}" else "--"),
+        "Steps per distance" to (
+            if (state.stepCount > 0) formatStepsPerDistanceUnit(state.stepCount, state.distanceMeters, unitSystem)
+            else "--"
+            ),
+        "Stride length" to (
+            if (state.stepCount > 0) formatStrideLengthMeters(state.strideLengthMeters, unitSystem) else "--"
+            )
     )
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {

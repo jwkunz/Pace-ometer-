@@ -18,7 +18,7 @@ class PaceometerApp : Application() {
 
     val database: PaceometerDatabase by lazy {
         Room.databaseBuilder(this, PaceometerDatabase::class.java, PaceometerDatabase.DATABASE_NAME)
-            .addMigrations(PaceometerDatabase.MIGRATION_2_3)
+            .addMigrations(PaceometerDatabase.MIGRATION_2_3, PaceometerDatabase.MIGRATION_3_4)
             // Pre-release app; only a real migration path is kept for versions already
             // installed on the test device, anything older falls back to a fresh start.
             .fallbackToDestructiveMigration(dropAllTables = true)

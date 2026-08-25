@@ -27,6 +27,7 @@ import com.example.pace_ometer.util.AgeAndHrZoneCalculator
 import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
 import com.example.pace_ometer.util.formatPaceSecPerKm
+import com.example.pace_ometer.util.formatStepsPerDistanceUnit
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Polyline
@@ -77,6 +78,12 @@ fun RunSummaryScreen(
                         r.estimatedCalories?.let { Text("Calories: ${it.toInt()}") }
                         r.elevationGainMeters?.let { gain ->
                             Text("Elevation gain/loss: +${gain.toInt()}m / -${(r.elevationLossMeters ?: 0.0).toInt()}m")
+                        }
+                        r.stepCount?.takeIf { it > 0 }?.let { steps ->
+                            val stepsPerDistance = formatStepsPerDistanceUnit(
+                                steps, r.totalDistanceMeters, settings.unitSystem
+                            )
+                            Text("Steps: $steps ($stepsPerDistance)")
                         }
                     }
                 }

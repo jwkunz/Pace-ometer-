@@ -25,7 +25,7 @@ import com.example.pace_ometer.data.db.entity.SeasonEntity
         EquipmentEntity::class,
         RunEquipmentCrossRef::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = true
 )
 abstract class PaceometerDatabase : RoomDatabase() {
@@ -63,6 +63,13 @@ abstract class PaceometerDatabase : RoomDatabase() {
                 db.execSQL(
                     "CREATE INDEX IF NOT EXISTS `index_run_equipment_equipmentId` ON `run_equipment` (`equipmentId`)"
                 )
+            }
+        }
+
+        /** Adds step-count tracking without touching existing runs already on-device. */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `runs` ADD COLUMN `stepCount` INTEGER")
             }
         }
     }

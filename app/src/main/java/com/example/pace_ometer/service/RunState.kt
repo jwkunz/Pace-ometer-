@@ -15,5 +15,7 @@ data class RunState(
     val elevationChangeLastSegmentMeters: Double? = null,
     val heartRateBpm: Int? = null,
     val cadenceSpm: Int? = null,
-    val caloriesBurned: Double = 0.0
+    val caloriesBurned: Double = 0.0,
+    val stepCount: Int = 0,
+    val strideLengthMeters: Double = 0.0
 )

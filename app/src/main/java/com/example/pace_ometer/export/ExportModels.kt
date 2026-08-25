@@ -30,6 +30,7 @@ data class RunExportEntry(
     val maxHeartRateBpm: Int?,
     val avgCadenceSpm: Int?,
     val estimatedCalories: Double?,
+    val stepCount: Int?,
     val unitSystemAtRunTime: String,
     val samples: List<RunSampleExportEntry>
 )
