@@ -154,7 +154,12 @@ private fun RunMap(points: List<GeoPoint>) {
             .height(240.dp),
         factory = { context ->
             MapView(context).apply {
-                setTileSource(TileSourceFactory.MAPNIK)
+                // tile.openstreetmap.org's usage policy explicitly excludes "distributing a
+                // mobile application" and 403-blocks non-compliant traffic; Wikimedia's tile
+                // service similarly 403s with "restricted to Wikimedia and affiliated sites
+                // only" (confirmed live via logcat). OpenTopoMap is the tile source actually
+                // reachable from a sideloaded, peer-distributed app without an API key.
+                setTileSource(TileSourceFactory.OpenTopo)
                 setMultiTouchControls(true)
             }
         },

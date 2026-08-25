@@ -51,10 +51,11 @@ class PaceometerApp : Application() {
         // reference for path resolution) before any per-field overrides are set, or its
         // tile providers silently fail to construct.
         Configuration.getInstance().load(this, PreferenceManager.getDefaultSharedPreferences(this))
-        // OSM's default tile server actively blocks the "com.example.*" placeholder package
-        // name (it's a well-known abused default), so this must be a distinctive value rather
-        // than the literal applicationId.
-        Configuration.getInstance().userAgentValue = "Pace-ometer-personal-running-app"
+        // A descriptive, contactable User-Agent -- required by essentially every free tile
+        // provider's usage policy, and generic/default values (including the literal
+        // applicationId) get silently 403-blocked.
+        Configuration.getInstance().userAgentValue =
+            "Pace-ometer/1.0 (https://github.com/jwkunz/Pace-ometer-) osmdroid"
         Configuration.getInstance().osmdroidTileCache = java.io.File(cacheDir, "osmdroid")
     }
 }
