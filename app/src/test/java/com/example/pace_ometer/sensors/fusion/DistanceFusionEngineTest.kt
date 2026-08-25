@@ -75,6 +75,19 @@ class DistanceFusionEngineTest {
     }
 
     @Test
+    fun `derives pace from step cadence during a gps gap instead of freezing it`() {
+        val engine = DistanceFusionEngine(gpsGapThresholdMs = 8_000L, defaultStrideLengthMeters = 0.8)
+        engine.onGpsFix(GpsFix(0.0, 0.0, null, 5f, 0L))
+
+        // 0.8m stride every 500ms -> 1.6 m/s -> 625 sec/km; run enough steps for the EMA to converge.
+        var lastPoint: FusedPoint? = null
+        repeat(40) { i -> lastPoint = engine.onStepDetected(stepTimestampMs = 9_000L + i * 500L) }
+
+        val pace = lastPoint!!.instantaneousPaceSecPerKm ?: 0.0
+        assertTrue("expected pace to converge near 625 sec/km, was $pace", abs(pace - 625.0) < 25.0)
+    }
+
+    @Test
     fun `calibrates stride length from recent good-gps pace`() {
         val engine = DistanceFusionEngine(defaultStrideLengthMeters = 0.75, strideCalibrationStepCount = 5)
         val stepLat = latDegreesFor(100.0)

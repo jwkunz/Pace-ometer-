@@ -15,7 +15,10 @@ import com.example.pace_ometer.util.haversineMeters
  * Gap handling: when no GPS fix has arrived for [gpsGapThresholdMs], callers should switch to
  * feeding step events via [onStepDetected], which advances distance using a stride length
  * continuously calibrated from recent good-GPS pace (see [onStepDuringGoodGps]) rather than by
- * double-integrating raw acceleration, which drifts too fast to be usable.
+ * double-integrating raw acceleration, which drifts too fast to be usable. Pace during a gap is
+ * likewise derived from the accelerometer -- each step's interval since the previous one implies
+ * a speed (stride length / interval), fed into the same smoothing filter GPS fixes use -- rather
+ * than staying frozen at the last GPS-derived value for the whole gap.
  */
 class DistanceFusionEngine(
     private val maxAcceptableAccuracyMeters: Float = 20f,
@@ -33,6 +36,7 @@ class DistanceFusionEngine(
     private var calibrationDistanceMeters: Double = 0.0
     private var calibrationSteps: Int = 0
     private var totalSteps: Int = 0
+    private var lastGapStepTimestampMs: Long? = null
 
     val distanceMeters: Double get() = cumulativeDistanceMeters
     val currentStrideLengthMeters: Double get() = strideLengthMeters
@@ -53,6 +57,7 @@ class DistanceFusionEngine(
 
         if (previous == null) {
             lastAcceptedFix = fix
+            lastGapStepTimestampMs = null
             return currentFusedPoint(fix.timestampMs, elevation = fix.altitudeMeters)
         }
 
@@ -68,6 +73,7 @@ class DistanceFusionEngine(
             // Likely a GPS jump artifact: don't accumulate distance, but keep this fix as the
             // new reference point so a single bad sample doesn't permanently wedge the filter.
             lastAcceptedFix = fix
+            lastGapStepTimestampMs = null
             return currentFusedPoint(fix.timestampMs, elevation = fix.altitudeMeters)
         }
 
@@ -75,6 +81,7 @@ class DistanceFusionEngine(
         cumulativeDistanceMeters += deltaMeters
         calibrationDistanceMeters += deltaMeters
         lastAcceptedFix = fix
+        lastGapStepTimestampMs = null
 
         return FusedPoint(
             timestampMs = fix.timestampMs,
@@ -102,6 +109,19 @@ class DistanceFusionEngine(
     fun onStepDetected(stepTimestampMs: Long): FusedPoint {
         totalSteps += 1
         cumulativeDistanceMeters += strideLengthMeters
+
+        val previousStepMs = lastGapStepTimestampMs
+        if (previousStepMs != null) {
+            val stepIntervalSeconds = (stepTimestampMs - previousStepMs) / 1000.0
+            if (stepIntervalSeconds > 0) {
+                val stepSpeedMps = strideLengthMeters / stepIntervalSeconds
+                if (stepSpeedMps <= maxPlausibleSpeedMps) {
+                    smoothedSpeedMps = speedSmoothingAlpha * stepSpeedMps + (1 - speedSmoothingAlpha) * smoothedSpeedMps
+                }
+            }
+        }
+        lastGapStepTimestampMs = stepTimestampMs
+
         return FusedPoint(
             timestampMs = stepTimestampMs,
             latitude = null,
