@@ -120,6 +120,28 @@ fun RunSummaryScreen(
                     xValueFormatter = { "%.1fmin".format(it) }
                 )
             }
+
+            val cadencePoints = samples.mapNotNull { s ->
+                s.cadenceSpm?.let { (s.cumulativeDistanceMeters / 1000f).toFloat() to it.toFloat() }
+            }
+            if (cadencePoints.isNotEmpty()) {
+                LineChart(
+                    title = "Cadence over distance",
+                    points = cadencePoints,
+                    valueFormatter = { "${it.toInt()} spm" },
+                    xValueFormatter = { "%.1fkm".format(it) }
+                )
+            }
+
+            val caloriesOverTime by viewModel.caloriesOverTime.collectAsState()
+            if (caloriesOverTime.size >= 2) {
+                LineChart(
+                    title = "Calories burned over time",
+                    points = caloriesOverTime,
+                    valueFormatter = { "${it.toInt()} kcal" },
+                    xValueFormatter = { "%.1fmin".format(it) }
+                )
+            }
         }
     }
 }
