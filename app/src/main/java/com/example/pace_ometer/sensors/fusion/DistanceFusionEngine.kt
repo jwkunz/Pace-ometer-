@@ -2,6 +2,10 @@ package com.example.pace_ometer.sensors.fusion
 
 import com.example.pace_ometer.data.db.entity.SampleSource
 import com.example.pace_ometer.util.haversineMeters
+import kotlin.math.roundToInt
+
+private const val CADENCE_WINDOW_MS = 10_000L
+private const val CADENCE_MIN_SAMPLES = 3
 
 /**
  * Combines GPS fixes (primary source) with accelerometer step events (fallback during GPS
@@ -37,14 +41,42 @@ class DistanceFusionEngine(
     private var calibrationSteps: Int = 0
     private var totalSteps: Int = 0
     private var lastGapStepTimestampMs: Long? = null
+    private val recentStepTimestampsMs = ArrayDeque<Long>()
 
     val distanceMeters: Double get() = cumulativeDistanceMeters
     val currentStrideLengthMeters: Double get() = strideLengthMeters
     val lastFixTimestampMs: Long? get() = lastAcceptedFix?.timestampMs
     val stepCount: Int get() = totalSteps
 
+    /** Steps-per-minute over a short rolling window of recent step timestamps, from whichever
+     *  source (hardware step sensor or accelerometer peak detection) is currently feeding steps
+     *  -- independent of GPS state, so this works even during a GPS gap. Null until enough
+     *  recent steps have been observed to make the estimate meaningful. */
+    val cadenceSpm: Int?
+        get() {
+            if (recentStepTimestampsMs.size < CADENCE_MIN_SAMPLES) return null
+            val windowSeconds = (recentStepTimestampsMs.last() - recentStepTimestampsMs.first()) / 1000.0
+            if (windowSeconds <= 0) return null
+            return ((recentStepTimestampsMs.size - 1) / windowSeconds * 60).roundToInt()
+        }
+
+    private fun recordStepForCadence(stepTimestampMs: Long) {
+        recentStepTimestampsMs.addLast(stepTimestampMs)
+        while (recentStepTimestampsMs.size > 1 &&
+            stepTimestampMs - recentStepTimestampsMs.first() > CADENCE_WINDOW_MS
+        ) {
+            recentStepTimestampsMs.removeFirst()
+        }
+    }
+
+    /**
+     * True once no GPS fix has been accepted for [gpsGapThresholdMs] -- also true when no fix
+     * has EVER been accepted yet (e.g. a run started indoors/without signal), since that's
+     * exactly the condition the accelerometer fallback needs to cover, not just a fix going
+     * stale mid-run.
+     */
     fun isInGpsGap(nowMs: Long): Boolean {
-        val last = lastAcceptedFix?.timestampMs ?: return false
+        val last = lastAcceptedFix?.timestampMs ?: return true
         return nowMs - last > gpsGapThresholdMs
     }
 
@@ -95,8 +127,9 @@ class DistanceFusionEngine(
     }
 
     /** Feed step events observed while GPS is fresh, to continuously calibrate [strideLengthMeters]. */
-    fun onStepDuringGoodGps() {
+    fun onStepDuringGoodGps(stepTimestampMs: Long) {
         totalSteps += 1
+        recordStepForCadence(stepTimestampMs)
         calibrationSteps += 1
         if (calibrationSteps >= strideCalibrationStepCount && calibrationDistanceMeters > 0) {
             strideLengthMeters = calibrationDistanceMeters / calibrationSteps
@@ -108,6 +141,7 @@ class DistanceFusionEngine(
     /** Feed step events while [isInGpsGap] is true, to dead-reckon distance until GPS resumes. */
     fun onStepDetected(stepTimestampMs: Long): FusedPoint {
         totalSteps += 1
+        recordStepForCadence(stepTimestampMs)
         cumulativeDistanceMeters += strideLengthMeters
 
         val previousStepMs = lastGapStepTimestampMs

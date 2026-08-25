@@ -128,7 +128,7 @@ class RunTrackingService : Service() {
             segmentStartDistanceMeters = 0.0
             segmentStartElevationMeters = null
             announcementScheduler = AnnouncementScheduler(announcementIntervalMeters(settings))
-            ttsAnnouncer = TtsAnnouncer(this@RunTrackingService)
+            ttsAnnouncer = TtsAnnouncer(this@RunTrackingService).also { it.speakAll(listOf("Starting run")) }
             mediaSessionManager = RunMediaSessionManager(
                 context = this@RunTrackingService,
                 onPlay = { resumeRun() },
@@ -251,10 +251,11 @@ class RunTrackingService : Service() {
                     val fused = fusionEngine.onStepDetected(stepTimestampMs)
                     applyFusedPoint(fused)
                 } else {
-                    fusionEngine.onStepDuringGoodGps()
+                    fusionEngine.onStepDuringGoodGps(stepTimestampMs)
                     _runState.value = _runState.value.copy(
                         stepCount = fusionEngine.stepCount,
-                        strideLengthMeters = fusionEngine.currentStrideLengthMeters
+                        strideLengthMeters = fusionEngine.currentStrideLengthMeters,
+                        cadenceSpm = fusionEngine.cadenceSpm
                     )
                 }
             }
@@ -355,7 +356,8 @@ class RunTrackingService : Service() {
             elevationGainMeters = gain,
             elevationLossMeters = loss,
             stepCount = fusionEngine.stepCount,
-            strideLengthMeters = fusionEngine.currentStrideLengthMeters
+            strideLengthMeters = fusionEngine.currentStrideLengthMeters,
+            cadenceSpm = fusionEngine.cadenceSpm
         )
         _runState.value = newState
 

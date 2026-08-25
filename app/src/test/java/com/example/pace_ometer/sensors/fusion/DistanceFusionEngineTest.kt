@@ -62,6 +62,33 @@ class DistanceFusionEngineTest {
     }
 
     @Test
+    fun `treats never having acquired a gps fix as a gap needing accelerometer fallback`() {
+        val engine = DistanceFusionEngine(defaultStrideLengthMeters = 0.8)
+
+        // A run started indoors/without signal never gets a first fix at all -- this must count
+        // as a gap from the very start, not "not yet in a gap", or distance/pace never advance.
+        assertTrue(engine.isInGpsGap(nowMs = 0L))
+        assertTrue(engine.isInGpsGap(nowMs = 5_000L))
+
+        repeat(5) { i -> engine.onStepDetected(stepTimestampMs = i * 500L) }
+        assertEquals(4.0, engine.distanceMeters, 0.001) // 5 steps * 0.8m
+    }
+
+    @Test
+    fun `derives cadence from recent step timestamps regardless of gps state`() {
+        val engine = DistanceFusionEngine()
+
+        // 180 steps/min == one step every 333ms.
+        var lastCadence: Int? = null
+        repeat(10) { i ->
+            engine.onStepDuringGoodGps(stepTimestampMs = i * 333L)
+            lastCadence = engine.cadenceSpm
+        }
+
+        assertTrue("expected cadence near 180 spm, was $lastCadence", abs((lastCadence ?: 0) - 180) <= 5)
+    }
+
+    @Test
     fun `dead reckons distance from steps during a gps gap`() {
         val engine = DistanceFusionEngine(gpsGapThresholdMs = 8_000L, defaultStrideLengthMeters = 0.8)
         engine.onGpsFix(GpsFix(0.0, 0.0, null, 5f, 0L))
@@ -96,7 +123,7 @@ class DistanceFusionEngineTest {
         engine.onGpsFix(GpsFix(stepLat, 0.0, null, 5f, 30_000L)) // 100m covered
 
         // 5 steps observed while covering that 100m -> calibrated stride should become 20m/step.
-        repeat(5) { engine.onStepDuringGoodGps() }
+        repeat(5) { i -> engine.onStepDuringGoodGps(stepTimestampMs = 30_000L + i * 500L) }
 
         assertEquals(20.0, engine.currentStrideLengthMeters, 0.01)
     }
