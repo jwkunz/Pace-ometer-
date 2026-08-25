@@ -68,6 +68,7 @@ class RunTrackingService : Service() {
     private var stepJob: Job? = null
     private var heartRateJob: Job? = null
     private var tickerJob: Job? = null
+    private var settingsJob: Job? = null
     private var lastTickElapsedRealtime: Long = 0
     private var lastElevationMeters: Double? = null
 
@@ -126,9 +127,7 @@ class RunTrackingService : Service() {
             segmentStartTimeMs = System.currentTimeMillis()
             segmentStartDistanceMeters = 0.0
             segmentStartElevationMeters = null
-            val intervalMeters = settings.announcementIntervalValue *
-                if (settings.announcementIntervalUnit == UnitSystem.IMPERIAL) 1609.344 else 1000.0
-            announcementScheduler = AnnouncementScheduler(intervalMeters)
+            announcementScheduler = AnnouncementScheduler(announcementIntervalMeters(settings))
             ttsAnnouncer = TtsAnnouncer(this@RunTrackingService)
             mediaSessionManager = RunMediaSessionManager(
                 context = this@RunTrackingService,
@@ -143,9 +142,31 @@ class RunTrackingService : Service() {
             beginLocationUpdates()
             beginStepUpdates()
             beginTicker()
+            beginSettingsUpdates()
             settings.heartRateDeviceAddress?.let { beginHeartRateMonitoring(it) }
         }
     }
+
+    /**
+     * Keeps [currentSettings] (and anything derived from it, like the announcement interval)
+     * live for the duration of the run, instead of frozen at whatever was configured at Start --
+     * changes made in Settings mid-run now take effect on the very next tick/announcement.
+     */
+    private fun beginSettingsUpdates() {
+        settingsJob = serviceScope.launch {
+            settingsRepository.userSettings.collect { settings ->
+                val newIntervalMeters = announcementIntervalMeters(settings)
+                if (newIntervalMeters != announcementIntervalMeters(currentSettings)) {
+                    announcementScheduler?.updateInterval(newIntervalMeters, _runState.value.distanceMeters)
+                }
+                currentSettings = settings
+            }
+        }
+    }
+
+    private fun announcementIntervalMeters(settings: UserSettings): Double =
+        settings.announcementIntervalValue *
+            if (settings.announcementIntervalUnit == UnitSystem.IMPERIAL) 1609.344 else 1000.0
 
     private fun pauseRun() {
         if (_runState.value.phase != RunPhase.RUNNING) return
@@ -172,6 +193,7 @@ class RunTrackingService : Service() {
         stepJob?.cancel()
         heartRateJob?.cancel()
         tickerJob?.cancel()
+        settingsJob?.cancel()
         heartRateSensor?.disconnect()
         heartRateSensor = null
         ttsAnnouncer?.shutdown()
