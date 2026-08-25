@@ -22,6 +22,9 @@ class HeartRateGattSensor(context: Context) : BleSensor<HeartRateReading> {
     override val isConnected: StateFlow<Boolean> = gattClient.isConnected
     override val readings: Flow<HeartRateReading> = _readings
 
+    /** Null while connecting/discovering; true/false once we know whether the device has 0x180D. */
+    val serviceAvailable: StateFlow<Boolean?> = gattClient.serviceAvailable
+
     override fun connect(device: BluetoothDevice) {
         gattClient.connect(
             device = device,

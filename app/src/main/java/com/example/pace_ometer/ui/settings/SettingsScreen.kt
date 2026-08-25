@@ -375,6 +375,7 @@ private fun LiveHeartRateStatus(deviceAddress: String) {
     val context = LocalContext.current
     var bpm by remember(deviceAddress) { mutableStateOf<Int?>(null) }
     var connected by remember(deviceAddress) { mutableStateOf(false) }
+    var serviceAvailable by remember(deviceAddress) { mutableStateOf<Boolean?>(null) }
 
     DisposableEffect(deviceAddress) {
         val hasBluetoothConnect = isPermissionGranted(context, Manifest.permission.BLUETOOTH_CONNECT)
@@ -388,6 +389,7 @@ private fun LiveHeartRateStatus(deviceAddress: String) {
         if (device != null) {
             sensor.connect(device)
             scope.launch { sensor.isConnected.collect { connected = it } }
+            scope.launch { sensor.serviceAvailable.collect { serviceAvailable = it } }
             scope.launch { sensor.readings.collect { bpm = it.bpm } }
         }
 
@@ -400,6 +402,9 @@ private fun LiveHeartRateStatus(deviceAddress: String) {
     Text(
         when {
             bpm != null -> "Current: $bpm bpm"
+            serviceAvailable == false ->
+                "This device doesn't expose standard Bluetooth heart-rate data — some smartwatches " +
+                    "(e.g. Samsung Galaxy Watch) only share heart rate through their own companion app."
             connected -> "Connected — waiting for a reading…"
             else -> "Connecting…"
         },
@@ -433,20 +438,19 @@ private fun AthleticSensorScanDialog(onDismiss: () -> Unit, onDeviceSelected: (S
             } else {
                 LazyColumn {
                     items(devices, key = { it.device.address }) { found ->
-                        val isHeartRate = "Heart rate" in found.serviceLabels
-                        val typeLabel = found.serviceLabels.joinToString(", ").ifEmpty { "Unknown type" }
+                        // Not every device advertises its GATT services (some wearables only
+                        // reveal them after connecting), so any named nearby device is
+                        // selectable -- the label below is just a hint, not a gate.
+                        val typeLabel = found.serviceLabels.joinToString(", ")
+                            .ifEmpty { "Unknown type — tap to try connecting" }
                         Column(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
                             Button(
-                                onClick = { if (isHeartRate) onDeviceSelected(found.device.address) },
-                                enabled = isHeartRate,
+                                onClick = { onDeviceSelected(found.device.address) },
                                 modifier = Modifier.fillMaxWidth()
                             ) {
                                 Text(found.device.name ?: found.device.address)
                             }
-                            Text(
-                                if (isHeartRate) typeLabel else "$typeLabel — not yet supported",
-                                style = MaterialTheme.typography.labelSmall
-                            )
+                            Text(typeLabel, style = MaterialTheme.typography.labelSmall)
                         }
                     }
                 }

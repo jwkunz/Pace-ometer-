@@ -25,6 +25,15 @@ class GattClientManager(private val context: Context) {
     private val _isConnected = MutableStateFlow(false)
     val isConnected: StateFlow<Boolean> = _isConnected
 
+    /**
+     * Null until service discovery completes, then true/false depending on whether the connected
+     * device's GATT server actually exposes the requested service -- e.g. some smartwatches (like
+     * Samsung Galaxy Watch models) connect fine but expose no standard BLE Heart Rate Service at
+     * all, sharing heart rate only through their own companion app instead.
+     */
+    private val _serviceAvailable = MutableStateFlow<Boolean?>(null)
+    val serviceAvailable: StateFlow<Boolean?> = _serviceAvailable
+
     @SuppressLint("MissingPermission")
     fun connect(
         device: BluetoothDevice,
@@ -32,6 +41,7 @@ class GattClientManager(private val context: Context) {
         characteristicUuid: UUID,
         onValueChanged: (ByteArray) -> Unit
     ) {
+        _serviceAvailable.value = null
         gatt = device.connectGatt(context, false, object : BluetoothGattCallback() {
             override fun onConnectionStateChange(g: BluetoothGatt, status: Int, newState: Int) {
                 when (newState) {
@@ -44,7 +54,12 @@ class GattClientManager(private val context: Context) {
             }
 
             override fun onServicesDiscovered(g: BluetoothGatt, status: Int) {
-                val characteristic = g.getService(serviceUuid)?.getCharacteristic(characteristicUuid) ?: return
+                val characteristic = g.getService(serviceUuid)?.getCharacteristic(characteristicUuid)
+                if (characteristic == null) {
+                    _serviceAvailable.value = false
+                    return
+                }
+                _serviceAvailable.value = true
                 g.setCharacteristicNotification(characteristic, true)
                 val cccd = characteristic.getDescriptor(BleServiceUuids.CLIENT_CHARACTERISTIC_CONFIG) ?: return
                 if (Build.VERSION.SDK_INT >= 33) {
@@ -78,5 +93,6 @@ class GattClientManager(private val context: Context) {
         gatt?.close()
         gatt = null
         _isConnected.value = false
+        _serviceAvailable.value = null
     }
 }
