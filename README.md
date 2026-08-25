@@ -8,12 +8,12 @@ theme, with no accounts and no cloud.
 ## Install
 
 Pace-ometer isn't on the Play Store — it's distributed as a signed APK straight from
-[GitHub Releases](https://github.com/jwkunz/Pace-ometer-/releases/latest). No account, no store,
+[GitHub Releases](https://github.com/jwkunz/Pace-ometer/releases/latest). No account, no store,
 no review process.
 
 **On your phone:**
 
-1. Open the [latest release](https://github.com/jwkunz/Pace-ometer-/releases/latest) in your
+1. Open the [latest release](https://github.com/jwkunz/Pace-ometer/releases/latest) in your
    phone's browser and download `app-release.apk`.
 2. Tap the downloaded file. Android will ask permission to install from your browser/file manager
    the first time — this is normal for any app installed outside the Play Store. Allow it.
