@@ -11,8 +11,11 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.pm.PackageInfoCompat
 
 private data class HelpSection(val title: String, val body: String)
 
@@ -71,6 +74,14 @@ private val helpSections = listOf(
 
 @Composable
 fun HelpScreen(onBack: () -> Unit) {
+    val context = LocalContext.current
+    val versionLabel = remember {
+        runCatching {
+            val info = context.packageManager.getPackageInfo(context.packageName, 0)
+            "Version ${info.versionName} (build ${PackageInfoCompat.getLongVersionCode(info)})"
+        }.getOrDefault("Version unknown")
+    }
+
     Scaffold(topBar = { TopAppBar(title = { Text("Help") }) }) { padding ->
         Column(
             modifier = Modifier
@@ -80,6 +91,11 @@ fun HelpScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
+            Text(
+                versionLabel,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
             helpSections.forEach { section ->
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(section.title, style = MaterialTheme.typography.titleMedium)
