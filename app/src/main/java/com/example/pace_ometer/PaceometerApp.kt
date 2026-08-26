@@ -55,7 +55,7 @@ class PaceometerApp : Application() {
         // provider's usage policy, and generic/default values (including the literal
         // applicationId) get silently 403-blocked.
         Configuration.getInstance().userAgentValue =
-            "Pace-ometer/1.2 (https://github.com/jwkunz/Pace-ometer) osmdroid"
+            "Pace-ometer/1.3 (https://github.com/jwkunz/Pace-ometer) osmdroid"
         Configuration.getInstance().osmdroidTileCache = java.io.File(cacheDir, "osmdroid")
     }
 }
