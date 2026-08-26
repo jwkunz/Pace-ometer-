@@ -18,6 +18,7 @@ private object Keys {
     val UNIT_SYSTEM = stringPreferencesKey("unit_system")
     val BODY_WEIGHT_KG = floatPreferencesKey("body_weight_kg")
     val HEART_RATE_DEVICE_ADDRESS = stringPreferencesKey("heart_rate_device_address")
+    val USE_HEALTH_CONNECT_HEART_RATE = booleanPreferencesKey("use_health_connect_heart_rate")
     val ANNOUNCEMENT_INTERVAL_VALUE = floatPreferencesKey("announcement_interval_value")
     val ANNOUNCEMENT_INTERVAL_UNIT = stringPreferencesKey("announcement_interval_unit")
     val ANNOUNCE_DISTANCE = booleanPreferencesKey("announce_distance")
@@ -73,6 +74,10 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         }
     }
 
+    suspend fun updateUseHealthConnectHeartRate(enabled: Boolean) {
+        dataStore.edit { prefs -> prefs[Keys.USE_HEALTH_CONNECT_HEART_RATE] = enabled }
+    }
+
     suspend fun updateHeightCm(heightCm: Float?) {
         dataStore.edit { prefs ->
             if (heightCm != null) prefs[Keys.HEIGHT_CM] = heightCm else prefs.remove(Keys.HEIGHT_CM)
@@ -122,6 +127,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
                 ?: UnitSystem.METRIC,
             bodyWeightKg = prefs[Keys.BODY_WEIGHT_KG] ?: 70f,
             heartRateDeviceAddress = prefs[Keys.HEART_RATE_DEVICE_ADDRESS],
+            useHealthConnectHeartRate = prefs[Keys.USE_HEALTH_CONNECT_HEART_RATE] ?: false,
             announcementIntervalValue = prefs[Keys.ANNOUNCEMENT_INTERVAL_VALUE] ?: 1f,
             announcementIntervalUnit = prefs[Keys.ANNOUNCEMENT_INTERVAL_UNIT]?.let {
                 runCatching { UnitSystem.valueOf(it) }.getOrNull()

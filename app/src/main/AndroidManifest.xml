@@ -15,6 +15,11 @@
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+    <uses-permission android:name="android.permission.health.READ_HEART_RATE" />
+
+    <queries>
+        <package android:name="com.google.android.apps.healthdata" />
+    </queries>
 
     <application
         android:name=".PaceometerApp"
@@ -43,6 +48,20 @@
             android:name=".service.RunTrackingService"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <!-- Required by Health Connect: shows who's reading health data when the user checks
+             "app permission usage" in the Health Connect app. Delegates straight to MainActivity
+             since this app has no dedicated privacy-usage screen of its own. -->
+        <activity-alias
+            android:name=".HealthConnectPermissionUsageActivity"
+            android:exported="true"
+            android:targetActivity=".MainActivity"
+            android:permission="android.permission.START_VIEW_PERMISSION_USAGE">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW_PERMISSION_USAGE" />
+                <category android:name="android.intent.category.HEALTH_PERMISSIONS" />
+            </intent-filter>
+        </activity-alias>
     </application>
 
 </manifest>

@@ -36,7 +36,9 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -46,6 +48,7 @@ import com.example.pace_ometer.data.settings.UserSettings
 import com.example.pace_ometer.sensors.ble.BleDeviceScanner
 import com.example.pace_ometer.sensors.ble.DiscoveredAthleticDevice
 import com.example.pace_ometer.sensors.ble.HeartRateGattSensor
+import com.example.pace_ometer.sensors.health.HealthConnectHeartRateSource
 import com.example.pace_ometer.ui.common.permissions.isPermissionGranted
 import com.example.pace_ometer.util.cmToDisplayHeight
 import com.example.pace_ometer.util.displayHeightToCm
@@ -123,6 +126,11 @@ fun SettingsScreen(
                 deviceAddress = settings.heartRateDeviceAddress,
                 onDeviceSelected = { viewModel.updateHeartRateDeviceAddress(it) },
                 onForget = { viewModel.updateHeartRateDeviceAddress(null) }
+            )
+            HealthConnectHeartRateSection(
+                enabled = settings.useHealthConnectHeartRate,
+                bleDeviceConnected = settings.heartRateDeviceAddress != null,
+                onEnabledChanged = { viewModel.updateUseHealthConnectHeartRate(it) }
             )
 
             Text("Voice announcements", style = MaterialTheme.typography.titleSmall)
@@ -365,6 +373,76 @@ private fun AthleticSensorSection(
                 showScanDialog = false
             }
         )
+    }
+}
+
+private const val HEALTH_CONNECT_PACKAGE = "com.google.android.apps.healthdata"
+
+/**
+ * Fallback heart-rate source for wearables (e.g. Samsung Galaxy Watch via Samsung Health) that
+ * don't expose a plain BLE GATT Heart Rate Service to third-party apps at all -- reads whatever
+ * Health Connect has synced instead of scanning/connecting over Bluetooth directly.
+ */
+@Composable
+private fun HealthConnectHeartRateSection(
+    enabled: Boolean,
+    bleDeviceConnected: Boolean,
+    onEnabledChanged: (Boolean) -> Unit
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val available = remember { HealthConnectHeartRateSource.isAvailable(context) }
+    var hasPermission by remember { mutableStateOf<Boolean?>(null) }
+    var lastCheckedBpm by remember { mutableStateOf<String?>(null) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        HealthConnectHeartRateSource.requestPermissionActivityContract()
+    ) { granted -> hasPermission = HealthConnectHeartRateSource.READ_HEART_RATE_PERMISSION in granted }
+
+    LaunchedEffect(available) {
+        if (available) hasPermission = HealthConnectHeartRateSource.hasPermission(context)
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        Text(
+            "For wearables that don't expose Bluetooth heart-rate directly (e.g. Samsung Galaxy " +
+                "Watch via Samsung Health), Pace-ometer can read whatever Health Connect has " +
+                "synced instead. Not real-time -- checked periodically during a run.",
+            style = MaterialTheme.typography.bodySmall
+        )
+        when {
+            !available -> OutlinedButton(onClick = {
+                val uri = android.net.Uri.parse("market://details?id=$HEALTH_CONNECT_PACKAGE")
+                context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri))
+            }) { Text("Install Health Connect") }
+
+            hasPermission == false -> OutlinedButton(onClick = {
+                permissionLauncher.launch(setOf(HealthConnectHeartRateSource.READ_HEART_RATE_PERMISSION))
+            }) { Text("Grant Health Connect access") }
+
+            hasPermission == true -> {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        "Use Health Connect for heart rate" +
+                            if (bleDeviceConnected) " (unused while a BLE monitor is paired)" else ""
+                    )
+                    Switch(checked = enabled, onCheckedChange = onEnabledChanged, enabled = !bleDeviceConnected)
+                }
+                if (enabled && !bleDeviceConnected) {
+                    OutlinedButton(onClick = {
+                        scope.launch {
+                            lastCheckedBpm = HealthConnectHeartRateSource.readLatestBpm(context)
+                                ?.let { "$it bpm" } ?: "No recent reading found in Health Connect"
+                        }
+                    }) { Text("Check now") }
+                    lastCheckedBpm?.let { Text(it, style = MaterialTheme.typography.bodySmall) }
+                }
+            }
+        }
     }
 }
 

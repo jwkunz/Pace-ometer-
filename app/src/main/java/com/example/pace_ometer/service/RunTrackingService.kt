@@ -19,6 +19,7 @@ import com.example.pace_ometer.data.settings.UserSettings
 import com.example.pace_ometer.media.RunMediaSessionManager
 import com.example.pace_ometer.sensors.ble.HeartRateGattSensor
 import com.example.pace_ometer.sensors.fusion.DistanceFusionEngine
+import com.example.pace_ometer.sensors.health.HealthConnectHeartRateSource
 import com.example.pace_ometer.sensors.fusion.FusedPoint
 import com.example.pace_ometer.sensors.fusion.GpsFix
 import com.example.pace_ometer.sensors.location.LocationTracker
@@ -46,6 +47,9 @@ class RunTrackingService : Service() {
         const val ACTION_PAUSE = "com.example.pace_ometer.action.PAUSE"
         const val ACTION_RESUME = "com.example.pace_ometer.action.RESUME"
         const val ACTION_STOP = "com.example.pace_ometer.action.STOP"
+
+        /** Health Connect is a synced data store, not a live stream -- poll rather than subscribe. */
+        private const val HEALTH_CONNECT_POLL_INTERVAL_MS = 10_000L
     }
 
     inner class LocalBinder : Binder() {
@@ -143,7 +147,11 @@ class RunTrackingService : Service() {
             beginStepUpdates()
             beginTicker()
             beginSettingsUpdates()
-            settings.heartRateDeviceAddress?.let { beginHeartRateMonitoring(it) }
+            if (settings.heartRateDeviceAddress != null) {
+                beginHeartRateMonitoring(settings.heartRateDeviceAddress)
+            } else if (settings.useHealthConnectHeartRate) {
+                beginHealthConnectHeartRatePolling()
+            }
         }
     }
 
@@ -280,6 +288,28 @@ class RunTrackingService : Service() {
                 heartRateCount += 1
                 heartRateMax = maxOf(heartRateMax ?: 0, reading.bpm)
                 _runState.value = _runState.value.copy(heartRateBpm = reading.bpm)
+            }
+        }
+    }
+
+    /**
+     * Fallback heart-rate source for wearables (e.g. Samsung Galaxy Watch via Samsung Health)
+     * that don't expose a plain BLE GATT Heart Rate Service -- reads whatever Health Connect has
+     * synced most recently instead of a live BLE connection. Only used when no BLE device is
+     * paired; requires the user to have already granted read access via Settings.
+     */
+    private fun beginHealthConnectHeartRatePolling() {
+        if (!HealthConnectHeartRateSource.isAvailable(applicationContext)) return
+        heartRateJob = serviceScope.launch {
+            if (!HealthConnectHeartRateSource.hasPermission(applicationContext)) return@launch
+            while (true) {
+                delay(HEALTH_CONNECT_POLL_INTERVAL_MS)
+                if (_runState.value.phase != RunPhase.RUNNING) continue
+                val bpm = HealthConnectHeartRateSource.readLatestBpm(applicationContext) ?: continue
+                heartRateSum += bpm
+                heartRateCount += 1
+                heartRateMax = maxOf(heartRateMax ?: 0, bpm)
+                _runState.value = _runState.value.copy(heartRateBpm = bpm)
             }
         }
     }

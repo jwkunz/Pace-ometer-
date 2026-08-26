@@ -27,7 +27,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.pace_ometer"
-        minSdk = 24
+        minSdk = 26
         targetSdk = 36
         versionCode = 3
         versionName = "1.2"
@@ -94,6 +94,7 @@ dependencies {
     implementation(libs.androidx.media3.common)
     implementation(libs.osmdroid.android)
     implementation(libs.kotlinx.serialization.json)
+    implementation(libs.androidx.health.connect.client)
     coreLibraryDesugaring(libs.android.desugar.jdk.libs)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))

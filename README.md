@@ -67,7 +67,7 @@ Android TextToSpeech, and a foreground service (`android:foregroundServiceType="
 ## Requirements
 
 - Android Studio (current stable) with an SDK platform matching `compileSdk`/`targetSdk` below.
-- A device or emulator running **API 24+** (min SDK); GPS/BLE testing requires a physical device.
+- A device or emulator running **API 26+** (min SDK); GPS/BLE testing requires a physical device.
 - `compileSdk`/`targetSdk`: see `app/build.gradle.kts`.
 
 ## Building
