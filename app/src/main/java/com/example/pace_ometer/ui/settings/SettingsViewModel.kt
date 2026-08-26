@@ -56,6 +56,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { settingsRepository.updateUseHealthConnectHeartRate(enabled) }
     }
 
+    fun updateAutoPauseEnabled(enabled: Boolean) {
+        viewModelScope.launch { settingsRepository.updateAutoPauseEnabled(enabled) }
+    }
+
     fun updateAnnouncementInterval(value: Float, unit: UnitSystem) {
         viewModelScope.launch { settingsRepository.updateAnnouncementInterval(value, unit) }
     }

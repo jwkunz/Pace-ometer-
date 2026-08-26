@@ -32,6 +32,7 @@ import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
@@ -50,6 +51,9 @@ class RunTrackingService : Service() {
 
         /** Health Connect is a synced data store, not a live stream -- poll rather than subscribe. */
         private const val HEALTH_CONNECT_POLL_INTERVAL_MS = 10_000L
+
+        /** How long without a detected step before auto-pause kicks in. */
+        private const val AUTO_PAUSE_IDLE_THRESHOLD_MS = 15_000L
     }
 
     inner class LocalBinder : Binder() {
@@ -89,6 +93,9 @@ class RunTrackingService : Service() {
     private var segmentStartTimeMs: Long = 0
     private var segmentStartDistanceMeters: Double = 0.0
     private var segmentStartElevationMeters: Double? = null
+
+    private var lastMotionTimestampMs: Long = 0L
+    private var autoPaused: Boolean = false
 
     override fun onCreate() {
         super.onCreate()
@@ -131,6 +138,8 @@ class RunTrackingService : Service() {
             segmentStartTimeMs = System.currentTimeMillis()
             segmentStartDistanceMeters = 0.0
             segmentStartElevationMeters = null
+            lastMotionTimestampMs = System.currentTimeMillis()
+            autoPaused = false
             announcementScheduler = AnnouncementScheduler(announcementIntervalMeters(settings))
             ttsAnnouncer = TtsAnnouncer(this@RunTrackingService).also { it.speakAll(listOf("Starting run")) }
             mediaSessionManager = RunMediaSessionManager(
@@ -179,15 +188,20 @@ class RunTrackingService : Service() {
     private fun pauseRun() {
         if (_runState.value.phase != RunPhase.RUNNING) return
         _runState.value = _runState.value.copy(phase = RunPhase.PAUSED)
-        mediaSessionManager?.setPlaying(false)
+        // SimpleBasePlayer enforces that it's only touched from the thread it was created on
+        // (the main thread, since manual pause arrives via onStartCommand there) -- auto-pause
+        // triggers this from a background ticker coroutine instead, so hop to Main explicitly
+        // rather than relying on the caller's thread.
+        serviceScope.launch(Dispatchers.Main) { mediaSessionManager?.setPlaying(false) }
         updateNotification()
     }
 
     private fun resumeRun() {
         if (_runState.value.phase != RunPhase.PAUSED) return
+        autoPaused = false
         lastTickElapsedRealtime = android.os.SystemClock.elapsedRealtime()
         _runState.value = _runState.value.copy(phase = RunPhase.RUNNING)
-        mediaSessionManager?.setPlaying(true)
+        serviceScope.launch(Dispatchers.Main) { mediaSessionManager?.setPlaying(true) }
         updateNotification()
     }
 
@@ -254,6 +268,9 @@ class RunTrackingService : Service() {
     private fun beginStepUpdates() {
         stepJob = serviceScope.launch {
             stepDetector.steps().collect { stepTimestampMs ->
+                // Tracked unconditionally (even while paused) so auto-pause can detect motion
+                // resuming and auto-resume the run.
+                lastMotionTimestampMs = stepTimestampMs
                 if (_runState.value.phase != RunPhase.RUNNING) return@collect
                 if (fusionEngine.isInGpsGap(System.currentTimeMillis())) {
                     val fused = fusionEngine.onStepDetected(stepTimestampMs)
@@ -335,6 +352,28 @@ class RunTrackingService : Service() {
                     )
                     updateNotification()
                 }
+                checkAutoPause()
+            }
+        }
+    }
+
+    /**
+     * Auto-pauses when no step has been detected for [AUTO_PAUSE_IDLE_THRESHOLD_MS], and
+     * auto-resumes as soon as motion picks back up -- but only for a pause this triggered itself,
+     * never overriding a pause the user tapped manually.
+     */
+    private fun checkAutoPause() {
+        if (!currentSettings.autoPauseEnabled) return
+        val idleMs = System.currentTimeMillis() - lastMotionTimestampMs
+        when {
+            _runState.value.phase == RunPhase.RUNNING && idleMs >= AUTO_PAUSE_IDLE_THRESHOLD_MS -> {
+                autoPaused = true
+                pauseRun()
+                ttsAnnouncer?.speakAll(listOf("Pausing run"))
+            }
+            _runState.value.phase == RunPhase.PAUSED && autoPaused && idleMs < AUTO_PAUSE_IDLE_THRESHOLD_MS -> {
+                resumeRun()
+                ttsAnnouncer?.speakAll(listOf("Starting run"))
             }
         }
     }

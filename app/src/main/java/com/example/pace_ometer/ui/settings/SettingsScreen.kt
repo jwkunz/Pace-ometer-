@@ -133,6 +133,24 @@ fun SettingsScreen(
                 onEnabledChanged = { viewModel.updateUseHealthConnectHeartRate(it) }
             )
 
+            Text("Auto-pause", style = MaterialTheme.typography.titleSmall)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "Automatically pause when no motion is detected, and resume when it picks " +
+                        "back up. Announces \"Pausing run\" / \"Starting run\".",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = settings.autoPauseEnabled,
+                    onCheckedChange = { viewModel.updateAutoPauseEnabled(it) }
+                )
+            }
+
             Text("Voice announcements", style = MaterialTheme.typography.titleSmall)
             VoiceAnnouncementSection(settings = settings, viewModel = viewModel)
 

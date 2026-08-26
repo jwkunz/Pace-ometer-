@@ -13,6 +13,7 @@ data class UserSettings(
     val bodyWeightKg: Float = 70f,
     val heartRateDeviceAddress: String? = null,
     val useHealthConnectHeartRate: Boolean = false,
+    val autoPauseEnabled: Boolean = false,
     val announcementIntervalValue: Float = 1f,
     val announcementIntervalUnit: UnitSystem = UnitSystem.METRIC,
     val announceDistance: Boolean = true,
