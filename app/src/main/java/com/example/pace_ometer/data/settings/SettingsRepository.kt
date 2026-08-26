@@ -25,6 +25,7 @@ private object Keys {
     val ANNOUNCE_ELAPSED_TIME = booleanPreferencesKey("announce_elapsed_time")
     val ANNOUNCE_ELEVATION = booleanPreferencesKey("announce_elevation")
     val ANNOUNCE_HEART_RATE = booleanPreferencesKey("announce_heart_rate")
+    val ANNOUNCE_HEART_RATE_ZONE = booleanPreferencesKey("announce_heart_rate_zone")
     val ANNOUNCE_CADENCE = booleanPreferencesKey("announce_cadence")
     val ANNOUNCE_SEGMENT_PACE = booleanPreferencesKey("announce_segment_pace")
     val ANNOUNCE_SPLIT_PACE = booleanPreferencesKey("announce_split_pace")
@@ -106,6 +107,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             prefs[Keys.ANNOUNCE_ELAPSED_TIME] = updated.announceElapsedTime
             prefs[Keys.ANNOUNCE_ELEVATION] = updated.announceElevation
             prefs[Keys.ANNOUNCE_HEART_RATE] = updated.announceHeartRate
+            prefs[Keys.ANNOUNCE_HEART_RATE_ZONE] = updated.announceHeartRateZone
             prefs[Keys.ANNOUNCE_CADENCE] = updated.announceCadence
             prefs[Keys.ANNOUNCE_SEGMENT_PACE] = updated.announceSegmentPace
             prefs[Keys.ANNOUNCE_SPLIT_PACE] = updated.announceSplitPace
@@ -136,6 +138,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             announceElapsedTime = prefs[Keys.ANNOUNCE_ELAPSED_TIME] ?: true,
             announceElevation = prefs[Keys.ANNOUNCE_ELEVATION] ?: false,
             announceHeartRate = prefs[Keys.ANNOUNCE_HEART_RATE] ?: false,
+            announceHeartRateZone = prefs[Keys.ANNOUNCE_HEART_RATE_ZONE] ?: false,
             announceCadence = prefs[Keys.ANNOUNCE_CADENCE] ?: false,
             announceSegmentPace = prefs[Keys.ANNOUNCE_SEGMENT_PACE] ?: true,
             announceSplitPace = prefs[Keys.ANNOUNCE_SPLIT_PACE] ?: false,

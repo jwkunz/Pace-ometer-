@@ -55,6 +55,32 @@ class AnnouncementContentBuilderTest {
     }
 
     @Test
+    fun `includes heart rate zone when toggled on with a birthdate on file`() {
+        val settings = UserSettings(
+            announceDistance = false,
+            announceElapsedTime = false,
+            announceSegmentPace = false,
+            announceHeartRateZone = true,
+            birthDateEpochDay = java.time.LocalDate.of(1990, 1, 1).toEpochDay()
+        )
+        val phrases = AnnouncementContentBuilder.build(settings, snapshot)
+        assertTrue(phrases.any { it.contains("Heart rate zone") })
+    }
+
+    @Test
+    fun `omits heart rate zone phrase when toggled on but no birthdate on file`() {
+        val settings = UserSettings(
+            announceDistance = false,
+            announceElapsedTime = false,
+            announceSegmentPace = false,
+            announceHeartRateZone = true,
+            birthDateEpochDay = null
+        )
+        val phrases = AnnouncementContentBuilder.build(settings, snapshot)
+        assertFalse(phrases.any { it.contains("Heart rate zone") })
+    }
+
+    @Test
     fun `omits heart rate phrase when toggled on but no reading present`() {
         val settings = UserSettings(
             announceDistance = false,

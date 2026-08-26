@@ -287,6 +287,11 @@ private val announcementToggles = listOf(
         { s, v -> s.copy(announceElevationChangeLastSegment = v) }
     ),
     AnnouncementToggle("Heart rate", { it.announceHeartRate }, { s, v -> s.copy(announceHeartRate = v) }),
+    AnnouncementToggle(
+        "Heart rate zone",
+        { it.announceHeartRateZone },
+        { s, v -> s.copy(announceHeartRateZone = v) }
+    ),
     AnnouncementToggle("Cadence", { it.announceCadence }, { s, v -> s.copy(announceCadence = v) }),
     AnnouncementToggle("Calories burned", { it.announceCalories }, { s, v -> s.copy(announceCalories = v) }),
     AnnouncementToggle("Current clock time", { it.announceClockTime }, { s, v -> s.copy(announceClockTime = v) })

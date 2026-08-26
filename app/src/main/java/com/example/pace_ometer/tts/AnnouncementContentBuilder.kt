@@ -1,6 +1,7 @@
 package com.example.pace_ometer.tts
 
 import com.example.pace_ometer.data.settings.UserSettings
+import com.example.pace_ometer.util.AgeAndHrZoneCalculator
 import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
 import com.example.pace_ometer.util.formatElevationMeters
@@ -52,6 +53,14 @@ object AnnouncementContentBuilder {
         }
         if (settings.announceHeartRate && snapshot.heartRateBpm != null) {
             phrases += "Heart rate: ${snapshot.heartRateBpm} beats per minute"
+        }
+        val birthDateEpochDay = settings.birthDateEpochDay
+        if (settings.announceHeartRateZone && snapshot.heartRateBpm != null && birthDateEpochDay != null) {
+            val maxHr = AgeAndHrZoneCalculator.estimatedMaxHeartRateBpm(
+                AgeAndHrZoneCalculator.ageYears(birthDateEpochDay)
+            )
+            val zone = AgeAndHrZoneCalculator.zoneFor(snapshot.heartRateBpm, maxHr)
+            phrases += if (zone != null) "Heart rate zone: ${zone.number}" else "Heart rate zone: below zone 1"
         }
         if (settings.announceCadence && snapshot.cadenceSpm != null) {
             phrases += "Cadence: ${snapshot.cadenceSpm} steps per minute"

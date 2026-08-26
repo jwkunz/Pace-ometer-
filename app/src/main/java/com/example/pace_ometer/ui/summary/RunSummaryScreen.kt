@@ -64,16 +64,17 @@ fun RunSummaryScreen(
                         Text(formatDurationMs(r.movingDurationMs))
                         Text("Avg pace: ${formatPaceSecPerKm(r.averagePaceSecPerKm)}")
                         r.avgHeartRateBpm?.let { avgBpm ->
+                            Text("Avg heart rate: $avgBpm bpm (max ${r.maxHeartRateBpm})")
                             val birthDateEpochDay = settings.birthDateEpochDay
-                            val zoneSuffix = if (birthDateEpochDay != null) {
+                            if (birthDateEpochDay != null) {
                                 val maxHr = AgeAndHrZoneCalculator.estimatedMaxHeartRateBpm(
                                     AgeAndHrZoneCalculator.ageYears(birthDateEpochDay)
                                 )
                                 val avgZone = AgeAndHrZoneCalculator.zoneFor(avgBpm, maxHr)
                                 val avgEffort = AgeAndHrZoneCalculator.effortPercent(avgBpm, maxHr)
-                                " -- ${avgZone?.let { "Z${it.number}, " } ?: ""}$avgEffort% effort"
-                            } else ""
-                            Text("Avg heart rate: $avgBpm bpm (max ${r.maxHeartRateBpm})$zoneSuffix")
+                                val zoneLabel = avgZone?.let { "Z${it.number} (${it.label})" } ?: "below Z1"
+                                Text("Avg heart rate zone: $zoneLabel, $avgEffort% effort")
+                            }
                         }
                         r.estimatedCalories?.let { Text("Calories: ${it.toInt()}") }
                         r.elevationGainMeters?.let { gain ->

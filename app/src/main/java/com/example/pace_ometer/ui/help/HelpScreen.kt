@@ -53,9 +53,10 @@ private val helpSections = listOf(
         "Voice announcements",
         "Choose how often (by distance) Pace-ometer speaks a status update during your run, and " +
             "which facts it includes -- distance, elapsed time, current and projected pace, " +
-            "elevation, heart rate, cadence, calories, and clock time. Only toggled-on items are " +
-            "spoken, and only if the corresponding data is available (e.g. heart rate needs a " +
-            "connected monitor)."
+            "elevation, heart rate, heart rate zone, cadence, calories, and clock time. Only " +
+            "toggled-on items are spoken, and only if the corresponding data is available (e.g. " +
+            "heart rate needs a connected monitor, and heart rate zone additionally needs a " +
+            "birthdate on file)."
     ),
     HelpSection(
         "Seasons and personal records",

@@ -19,6 +19,7 @@ data class UserSettings(
     val announceElapsedTime: Boolean = true,
     val announceElevation: Boolean = false,
     val announceHeartRate: Boolean = false,
+    val announceHeartRateZone: Boolean = false,
     val announceCadence: Boolean = false,
     val announceSegmentPace: Boolean = true,
     val announceSplitPace: Boolean = false,

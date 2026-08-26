@@ -119,19 +119,14 @@ private fun MetricsGrid(state: RunState, unitSystem: UnitSystem, settings: UserS
         "$sign${formatElevationMeters(abs(change), unitSystem)}"
     } ?: "--"
 
-    val heartRateLabel = state.heartRateBpm?.let { bpm ->
-        val birthDateEpochDay = settings.birthDateEpochDay
-        if (birthDateEpochDay != null) {
-            val maxHr = AgeAndHrZoneCalculator.estimatedMaxHeartRateBpm(
-                AgeAndHrZoneCalculator.ageYears(birthDateEpochDay)
-            )
-            val effortPercent = AgeAndHrZoneCalculator.effortPercent(bpm, maxHr)
-            val zone = AgeAndHrZoneCalculator.zoneFor(bpm, maxHr)
-            val zoneLabel = zone?.let { "Z${it.number}" } ?: "--"
-            "$bpm bpm ($zoneLabel, $effortPercent%)"
-        } else {
-            "$bpm bpm"
-        }
+    val heartRateZoneLabel = state.heartRateBpm?.let { bpm ->
+        val birthDateEpochDay = settings.birthDateEpochDay ?: return@let null
+        val maxHr = AgeAndHrZoneCalculator.estimatedMaxHeartRateBpm(
+            AgeAndHrZoneCalculator.ageYears(birthDateEpochDay)
+        )
+        val effortPercent = AgeAndHrZoneCalculator.effortPercent(bpm, maxHr)
+        val zone = AgeAndHrZoneCalculator.zoneFor(bpm, maxHr) ?: return@let "$effortPercent%"
+        "Z${zone.number} (${zone.label}, $effortPercent%)"
     } ?: "--"
 
     val metrics = listOf(
@@ -139,7 +134,8 @@ private fun MetricsGrid(state: RunState, unitSystem: UnitSystem, settings: UserS
         "Split (projected) pace" to formatPaceSecPerKm(state.currentPaceSecPerKm, unitSystem),
         "Elevation" to (state.elevationMeters?.let { formatElevationMeters(it, unitSystem) } ?: "--"),
         "Last segment elevation Δ" to elevationChangeLabel,
-        "Heart rate" to heartRateLabel,
+        "Heart rate" to (state.heartRateBpm?.let { "$it bpm" } ?: "--"),
+        "Heart rate zone" to heartRateZoneLabel,
         "Cadence" to (state.cadenceSpm?.let { "$it spm" } ?: "--"),
         "Calories" to "${state.caloriesBurned.roundToInt()} kcal",
         "Clock time" to clockTime,
