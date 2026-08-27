@@ -30,6 +30,7 @@ import com.example.pace_ometer.tts.AnnouncementSnapshot
 import com.example.pace_ometer.tts.TtsAnnouncer
 import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
+import com.example.pace_ometer.util.haversineMeters
 import com.google.android.gms.location.LocationServices
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -53,13 +54,15 @@ class RunTrackingService : Service() {
         private const val HEALTH_CONNECT_POLL_INTERVAL_MS = 10_000L
 
         /**
-         * How long without detected motion before auto-pause kicks in. Generous on purpose:
-         * many devices' hardware step-detector sensor batches events for power savings and can
-         * go a long stretch between callbacks even during continuous real motion, so a short
-         * threshold here reads as "way too sensitive" -- pausing almost immediately, including
-         * right after a resume.
+         * How long without detected motion before auto-pause kicks in. The over-sensitivity this
+         * was once raised to fix (15s -> 30s) turned out to be a real bug elsewhere -- resume
+         * not refreshing the idle clock -- so it's back to 15s now that that's fixed and GPS
+         * gives a second, non-batched motion signal alongside steps.
          */
-        private const val AUTO_PAUSE_IDLE_THRESHOLD_MS = 30_000L
+        private const val AUTO_PAUSE_IDLE_THRESHOLD_MS = 15_000L
+
+        /** Below this, GPS noise/drift while stationary shouldn't count as real motion. */
+        private const val MIN_MOTION_SPEED_MPS = 0.3
     }
 
     inner class LocalBinder : Binder() {
@@ -102,6 +105,7 @@ class RunTrackingService : Service() {
 
     private var lastMotionTimestampMs: Long = 0L
     private var autoPaused: Boolean = false
+    private var lastRawLocationForMotionCheck: Location? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -151,6 +155,7 @@ class RunTrackingService : Service() {
             segmentStartDistanceMeters = 0.0
             segmentStartElevationMeters = null
             lastMotionTimestampMs = System.currentTimeMillis()
+            lastRawLocationForMotionCheck = null
             autoPaused = false
             announcementScheduler = AnnouncementScheduler(announcementIntervalMeters(settings))
             ttsAnnouncer?.speakAll(listOf("Starting run"))
@@ -393,6 +398,22 @@ class RunTrackingService : Service() {
     }
 
     private fun onNewLocation(location: Location) {
+        // Independent of run phase and the (paused-while-idle) fusion engine, so auto-resume can
+        // react to real GPS movement even while paused -- waiting on the step sensor alone was
+        // the bug: it can batch its callbacks for a long, unpredictable stretch, so "start
+        // walking again" sometimes never produced a step event soon enough to trigger resume.
+        val previousRawFix = lastRawLocationForMotionCheck
+        if (previousRawFix != null) {
+            val deltaSeconds = (location.time - previousRawFix.time) / 1000.0
+            if (deltaSeconds > 0) {
+                val deltaMeters = haversineMeters(
+                    previousRawFix.latitude, previousRawFix.longitude, location.latitude, location.longitude
+                )
+                if (deltaMeters / deltaSeconds > MIN_MOTION_SPEED_MPS) lastMotionTimestampMs = location.time
+            }
+        }
+        lastRawLocationForMotionCheck = location
+
         val state = _runState.value
         if (state.phase != RunPhase.RUNNING || state.runId == null) return
 
@@ -410,11 +431,6 @@ class RunTrackingService : Service() {
     private fun applyFusedPoint(fused: FusedPoint) {
         val state = _runState.value
         if (state.phase != RunPhase.RUNNING || state.runId == null) return
-
-        // A second, independent motion signal alongside steps -- GPS isn't subject to the same
-        // hardware batching delay a step-detector sensor can have, so it keeps auto-pause from
-        // firing prematurely during real motion the step sensor just hasn't reported yet.
-        if (fused.instantaneousPaceSecPerKm != null) lastMotionTimestampMs = fused.timestampMs
 
         var gain = state.elevationGainMeters
         var loss = state.elevationLossMeters
