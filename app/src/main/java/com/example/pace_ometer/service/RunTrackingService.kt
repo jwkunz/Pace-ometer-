@@ -52,8 +52,14 @@ class RunTrackingService : Service() {
         /** Health Connect is a synced data store, not a live stream -- poll rather than subscribe. */
         private const val HEALTH_CONNECT_POLL_INTERVAL_MS = 10_000L
 
-        /** How long without a detected step before auto-pause kicks in. */
-        private const val AUTO_PAUSE_IDLE_THRESHOLD_MS = 15_000L
+        /**
+         * How long without detected motion before auto-pause kicks in. Generous on purpose:
+         * many devices' hardware step-detector sensor batches events for power savings and can
+         * go a long stretch between callbacks even during continuous real motion, so a short
+         * threshold here reads as "way too sensitive" -- pausing almost immediately, including
+         * right after a resume.
+         */
+        private const val AUTO_PAUSE_IDLE_THRESHOLD_MS = 30_000L
     }
 
     inner class LocalBinder : Binder() {
@@ -105,6 +111,12 @@ class RunTrackingService : Service() {
         locationTracker = LocationTracker(LocationServices.getFusedLocationProviderClient(this))
         stepDetector = StepDetector(getSystemService(SensorManager::class.java))
         RunNotificationFactory.ensureChannel(this)
+        // Created here (well before any run actually starts) rather than in startRun(), so the
+        // TTS engine has already finished its async connection -- which can take a second or
+        // more on a cold bind -- by the time "Starting run" needs to be spoken. Kept alive across
+        // runs for the same reason: tearing it down every stop/start forced that cold-start delay
+        // on every single run instead of just the first one this service process handles.
+        ttsAnnouncer = TtsAnnouncer(this)
     }
 
     override fun onBind(intent: Intent?): IBinder = binder
@@ -141,7 +153,7 @@ class RunTrackingService : Service() {
             lastMotionTimestampMs = System.currentTimeMillis()
             autoPaused = false
             announcementScheduler = AnnouncementScheduler(announcementIntervalMeters(settings))
-            ttsAnnouncer = TtsAnnouncer(this@RunTrackingService).also { it.speakAll(listOf("Starting run")) }
+            ttsAnnouncer?.speakAll(listOf("Starting run"))
             mediaSessionManager = RunMediaSessionManager(
                 context = this@RunTrackingService,
                 onPlay = { resumeRun() },
@@ -199,6 +211,10 @@ class RunTrackingService : Service() {
     private fun resumeRun() {
         if (_runState.value.phase != RunPhase.PAUSED) return
         autoPaused = false
+        // Otherwise a resume after any idle stretch longer than the auto-pause threshold (a
+        // manual pause included) instantly re-triggers auto-pause on the very next tick, since
+        // the idle clock was still stale from before the pause.
+        lastMotionTimestampMs = System.currentTimeMillis()
         lastTickElapsedRealtime = android.os.SystemClock.elapsedRealtime()
         _runState.value = _runState.value.copy(phase = RunPhase.RUNNING)
         serviceScope.launch(Dispatchers.Main) { mediaSessionManager?.setPlaying(true) }
@@ -218,8 +234,6 @@ class RunTrackingService : Service() {
         settingsJob?.cancel()
         heartRateSensor?.disconnect()
         heartRateSensor = null
-        ttsAnnouncer?.shutdown()
-        ttsAnnouncer = null
         mediaSessionManager?.stop()
         mediaSessionManager = null
         announcementScheduler = null
@@ -397,6 +411,11 @@ class RunTrackingService : Service() {
         val state = _runState.value
         if (state.phase != RunPhase.RUNNING || state.runId == null) return
 
+        // A second, independent motion signal alongside steps -- GPS isn't subject to the same
+        // hardware batching delay a step-detector sensor can have, so it keeps auto-pause from
+        // firing prematurely during real motion the step sensor just hasn't reported yet.
+        if (fused.instantaneousPaceSecPerKm != null) lastMotionTimestampMs = fused.timestampMs
+
         var gain = state.elevationGainMeters
         var loss = state.elevationLossMeters
         val previousElevation = lastElevationMeters
@@ -496,6 +515,8 @@ class RunTrackingService : Service() {
     override fun onDestroy() {
         super.onDestroy()
         heartRateSensor?.disconnect()
+        ttsAnnouncer?.shutdown()
+        ttsAnnouncer = null
         serviceJob.cancel()
     }
 }
