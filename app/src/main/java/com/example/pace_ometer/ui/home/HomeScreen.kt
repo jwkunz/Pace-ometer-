@@ -53,12 +53,20 @@ fun HomeScreen(
     val backgroundLocationGranted = if (Build.VERSION.SDK_INT >= 29) {
         rememberPermissionGrantedState(Manifest.permission.ACCESS_BACKGROUND_LOCATION).value
     } else true
+    // Without this, Android silently withholds all TYPE_STEP_DETECTOR/TYPE_STEP_COUNTER sensor
+    // events on API 29+, regardless of anything the app does -- steps, cadence, stride, and the
+    // accelerometer pace fallback during GPS gaps all depend on it. Soft-gated (doesn't block
+    // Start Run) since a run still works via GPS alone without it.
+    val activityRecognitionGranted = if (Build.VERSION.SDK_INT >= 29) {
+        rememberPermissionGrantedState(Manifest.permission.ACTIVITY_RECOGNITION).value
+    } else true
 
     val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     val fineLocationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
     val backgroundLocationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (!granted) showBackgroundLocationRationale = true
     }
+    val activityRecognitionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     Scaffold(
         topBar = { TopAppBar(title = { Text("Pace-ometer") }) }
@@ -100,6 +108,17 @@ fun HomeScreen(
             } else {
                 Button(onClick = onStartRun, modifier = Modifier.fillMaxWidth()) {
                     Text("Start Run")
+                }
+                if (!activityRecognitionGranted) {
+                    PermissionPrompt(
+                        message = "Allow physical activity access so Pace-ometer can detect " +
+                            "steps for cadence, stride, and pace tracking during GPS gaps.",
+                        buttonLabel = "Allow step tracking"
+                    ) {
+                        if (Build.VERSION.SDK_INT >= 29) {
+                            activityRecognitionLauncher.launch(Manifest.permission.ACTIVITY_RECOGNITION)
+                        }
+                    }
                 }
             }
 

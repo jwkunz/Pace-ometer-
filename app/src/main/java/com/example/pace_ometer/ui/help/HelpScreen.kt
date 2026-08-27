@@ -38,6 +38,13 @@ private val helpSections = listOf(
             "pace tracking will be unreliable."
     ),
     HelpSection(
+        "Physical activity permission",
+        "Optional but recommended -- without it, Android silently blocks the phone's step " +
+            "sensor entirely, so Steps, Cadence, Stride length, and the accelerometer pace " +
+            "fallback during GPS gaps won't work. A run still tracks fine via GPS alone without " +
+            "this permission; it's only those specific step-based metrics that need it."
+    ),
+    HelpSection(
         "Saving a run",
         "When you stop a run, you choose whether to save it to your run history or discard it. " +
             "Only saved runs count toward your run history and personal records."
