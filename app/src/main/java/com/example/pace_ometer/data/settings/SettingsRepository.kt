@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import kotlinx.coroutines.flow.Flow
@@ -20,6 +21,7 @@ private object Keys {
     val HEART_RATE_DEVICE_ADDRESS = stringPreferencesKey("heart_rate_device_address")
     val USE_HEALTH_CONNECT_HEART_RATE = booleanPreferencesKey("use_health_connect_heart_rate")
     val AUTO_PAUSE_ENABLED = booleanPreferencesKey("auto_pause_enabled")
+    val AUTO_PAUSE_IDLE_THRESHOLD_SECONDS = intPreferencesKey("auto_pause_idle_threshold_seconds")
     val ANNOUNCEMENT_INTERVAL_VALUE = floatPreferencesKey("announcement_interval_value")
     val ANNOUNCEMENT_INTERVAL_UNIT = stringPreferencesKey("announcement_interval_unit")
     val ANNOUNCE_DISTANCE = booleanPreferencesKey("announce_distance")
@@ -84,6 +86,10 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { prefs -> prefs[Keys.AUTO_PAUSE_ENABLED] = enabled }
     }
 
+    suspend fun updateAutoPauseIdleThresholdSeconds(seconds: Int) {
+        dataStore.edit { prefs -> prefs[Keys.AUTO_PAUSE_IDLE_THRESHOLD_SECONDS] = seconds }
+    }
+
     suspend fun updateHeightCm(heightCm: Float?) {
         dataStore.edit { prefs ->
             if (heightCm != null) prefs[Keys.HEIGHT_CM] = heightCm else prefs.remove(Keys.HEIGHT_CM)
@@ -136,6 +142,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             heartRateDeviceAddress = prefs[Keys.HEART_RATE_DEVICE_ADDRESS],
             useHealthConnectHeartRate = prefs[Keys.USE_HEALTH_CONNECT_HEART_RATE] ?: false,
             autoPauseEnabled = prefs[Keys.AUTO_PAUSE_ENABLED] ?: false,
+            autoPauseIdleThresholdSeconds = prefs[Keys.AUTO_PAUSE_IDLE_THRESHOLD_SECONDS] ?: 5,
             announcementIntervalValue = prefs[Keys.ANNOUNCEMENT_INTERVAL_VALUE] ?: 1f,
             announcementIntervalUnit = prefs[Keys.ANNOUNCEMENT_INTERVAL_UNIT]?.let {
                 runCatching { UnitSystem.valueOf(it) }.getOrNull()

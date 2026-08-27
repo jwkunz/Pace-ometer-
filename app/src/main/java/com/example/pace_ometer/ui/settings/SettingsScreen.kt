@@ -76,6 +76,9 @@ fun SettingsScreen(
             settings.heightCm?.let { "%.1f".format(cmToDisplayHeight(it, settings.unitSystem)) } ?: ""
         )
     }
+    var autoPauseThresholdText by remember(settings.autoPauseIdleThresholdSeconds) {
+        mutableStateOf(settings.autoPauseIdleThresholdSeconds.toString())
+    }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Settings") }) }) { padding ->
         Column(
@@ -148,6 +151,18 @@ fun SettingsScreen(
                 Switch(
                     checked = settings.autoPauseEnabled,
                     onCheckedChange = { viewModel.updateAutoPauseEnabled(it) }
+                )
+            }
+            if (settings.autoPauseEnabled) {
+                OutlinedTextField(
+                    value = autoPauseThresholdText,
+                    onValueChange = {
+                        autoPauseThresholdText = it
+                        it.toIntOrNull()?.takeIf { seconds -> seconds > 0 }
+                            ?.let { seconds -> viewModel.updateAutoPauseIdleThresholdSeconds(seconds) }
+                    },
+                    label = { Text("Pause after (seconds without motion)") },
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
 

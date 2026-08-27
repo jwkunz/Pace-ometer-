@@ -53,14 +53,6 @@ class RunTrackingService : Service() {
         /** Health Connect is a synced data store, not a live stream -- poll rather than subscribe. */
         private const val HEALTH_CONNECT_POLL_INTERVAL_MS = 10_000L
 
-        /**
-         * How long without detected motion before auto-pause kicks in. The over-sensitivity this
-         * was once raised to fix (15s -> 30s) turned out to be a real bug elsewhere -- resume
-         * not refreshing the idle clock -- so it's back to 15s now that that's fixed and GPS
-         * gives a second, non-batched motion signal alongside steps.
-         */
-        private const val AUTO_PAUSE_IDLE_THRESHOLD_MS = 15_000L
-
         /** Below this, GPS noise/drift while stationary shouldn't count as real motion. */
         private const val MIN_MOTION_SPEED_MPS = 0.3
     }
@@ -210,6 +202,9 @@ class RunTrackingService : Service() {
         // triggers this from a background ticker coroutine instead, so hop to Main explicitly
         // rather than relying on the caller's thread.
         serviceScope.launch(Dispatchers.Main) { mediaSessionManager?.setPlaying(false) }
+        // Announced here (not just at the auto-pause call site) so a manual tap of the Pause
+        // button, or a connected headset's button, gets the same spoken confirmation.
+        ttsAnnouncer?.speakAll(listOf("Pausing run"))
         updateNotification()
     }
 
@@ -223,6 +218,9 @@ class RunTrackingService : Service() {
         lastTickElapsedRealtime = android.os.SystemClock.elapsedRealtime()
         _runState.value = _runState.value.copy(phase = RunPhase.RUNNING)
         serviceScope.launch(Dispatchers.Main) { mediaSessionManager?.setPlaying(true) }
+        // Announced here (not just at the auto-resume call site) so a manual tap of the Resume
+        // button, or a connected headset's button, gets the same spoken confirmation.
+        ttsAnnouncer?.speakAll(listOf("Starting run"))
         updateNotification()
     }
 
@@ -377,22 +375,22 @@ class RunTrackingService : Service() {
     }
 
     /**
-     * Auto-pauses when no step has been detected for [AUTO_PAUSE_IDLE_THRESHOLD_MS], and
+     * Auto-pauses when no motion has been detected for the configured idle threshold, and
      * auto-resumes as soon as motion picks back up -- but only for a pause this triggered itself,
-     * never overriding a pause the user tapped manually.
+     * never overriding a pause the user tapped manually. pauseRun()/resumeRun() handle the spoken
+     * announcement themselves, so this doesn't need to.
      */
     private fun checkAutoPause() {
         if (!currentSettings.autoPauseEnabled) return
         val idleMs = System.currentTimeMillis() - lastMotionTimestampMs
+        val thresholdMs = currentSettings.autoPauseIdleThresholdSeconds * 1000L
         when {
-            _runState.value.phase == RunPhase.RUNNING && idleMs >= AUTO_PAUSE_IDLE_THRESHOLD_MS -> {
+            _runState.value.phase == RunPhase.RUNNING && idleMs >= thresholdMs -> {
                 autoPaused = true
                 pauseRun()
-                ttsAnnouncer?.speakAll(listOf("Pausing run"))
             }
-            _runState.value.phase == RunPhase.PAUSED && autoPaused && idleMs < AUTO_PAUSE_IDLE_THRESHOLD_MS -> {
+            _runState.value.phase == RunPhase.PAUSED && autoPaused && idleMs < thresholdMs -> {
                 resumeRun()
-                ttsAnnouncer?.speakAll(listOf("Starting run"))
             }
         }
     }

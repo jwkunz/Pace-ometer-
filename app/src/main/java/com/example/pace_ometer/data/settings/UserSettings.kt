@@ -14,6 +14,7 @@ data class UserSettings(
     val heartRateDeviceAddress: String? = null,
     val useHealthConnectHeartRate: Boolean = false,
     val autoPauseEnabled: Boolean = false,
+    val autoPauseIdleThresholdSeconds: Int = 5,
     val announcementIntervalValue: Float = 1f,
     val announcementIntervalUnit: UnitSystem = UnitSystem.METRIC,
     val announceDistance: Boolean = true,

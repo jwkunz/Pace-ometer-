@@ -60,6 +60,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { settingsRepository.updateAutoPauseEnabled(enabled) }
     }
 
+    fun updateAutoPauseIdleThresholdSeconds(seconds: Int) {
+        viewModelScope.launch { settingsRepository.updateAutoPauseIdleThresholdSeconds(seconds) }
+    }
+
     fun updateAnnouncementInterval(value: Float, unit: UnitSystem) {
         viewModelScope.launch { settingsRepository.updateAnnouncementInterval(value, unit) }
     }
