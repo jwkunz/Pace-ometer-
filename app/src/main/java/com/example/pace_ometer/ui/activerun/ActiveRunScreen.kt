@@ -30,6 +30,7 @@ import com.example.pace_ometer.data.settings.UserSettings
 import com.example.pace_ometer.service.RunPhase
 import com.example.pace_ometer.service.RunState
 import com.example.pace_ometer.util.AgeAndHrZoneCalculator
+import com.example.pace_ometer.util.averagePaceSecPerKm
 import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
 import com.example.pace_ometer.util.formatElevationMeters
@@ -132,6 +133,9 @@ private fun MetricsGrid(state: RunState, unitSystem: UnitSystem, settings: UserS
     val metrics = listOf(
         "Segment pace" to formatPaceSecPerKm(state.segmentPaceSecPerKm, unitSystem),
         "Split (projected) pace" to formatPaceSecPerKm(state.currentPaceSecPerKm, unitSystem),
+        "Average pace" to formatPaceSecPerKm(
+            averagePaceSecPerKm(state.distanceMeters, state.movingDurationMs), unitSystem
+        ),
         "Elevation" to (state.elevationMeters?.let { formatElevationMeters(it, unitSystem) } ?: "--"),
         "Last segment elevation Δ" to elevationChangeLabel,
         "Heart rate" to (state.heartRateBpm?.let { "$it bpm" } ?: "--"),

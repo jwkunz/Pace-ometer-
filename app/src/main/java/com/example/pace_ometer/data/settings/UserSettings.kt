@@ -25,6 +25,7 @@ data class UserSettings(
     val announceCadence: Boolean = false,
     val announceSegmentPace: Boolean = true,
     val announceSplitPace: Boolean = false,
+    val announceAveragePace: Boolean = false,
     val announceElevationChangeLastSegment: Boolean = false,
     val announceCalories: Boolean = false,
     val announceClockTime: Boolean = false

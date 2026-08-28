@@ -18,6 +18,10 @@ fun formatDistanceMeters(meters: Double, unitSystem: UnitSystem = UnitSystem.MET
     return "%.2f %s".format(value, unit)
 }
 
+/** Average pace (sec/km) over the whole run so far, or null before any distance has accrued. */
+fun averagePaceSecPerKm(distanceMeters: Double, durationMs: Long): Double? =
+    if (distanceMeters > 0) (durationMs / 1000.0) / (distanceMeters / 1000.0) else null
+
 /** Formats a pace given in seconds-per-km into the display unit's "m:ss / unit" form. */
 fun formatPaceSecPerKm(secPerKm: Double?, unitSystem: UnitSystem = UnitSystem.METRIC): String {
     if (secPerKm == null || secPerKm.isInfinite() || secPerKm.isNaN()) return "--:--"

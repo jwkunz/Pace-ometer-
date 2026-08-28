@@ -32,6 +32,7 @@ private object Keys {
     val ANNOUNCE_CADENCE = booleanPreferencesKey("announce_cadence")
     val ANNOUNCE_SEGMENT_PACE = booleanPreferencesKey("announce_segment_pace")
     val ANNOUNCE_SPLIT_PACE = booleanPreferencesKey("announce_split_pace")
+    val ANNOUNCE_AVERAGE_PACE = booleanPreferencesKey("announce_average_pace")
     val ANNOUNCE_ELEVATION_CHANGE_LAST_SEGMENT = booleanPreferencesKey("announce_elevation_change_last_segment")
     val ANNOUNCE_CALORIES = booleanPreferencesKey("announce_calories")
     val ANNOUNCE_CLOCK_TIME = booleanPreferencesKey("announce_clock_time")
@@ -122,6 +123,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             prefs[Keys.ANNOUNCE_CADENCE] = updated.announceCadence
             prefs[Keys.ANNOUNCE_SEGMENT_PACE] = updated.announceSegmentPace
             prefs[Keys.ANNOUNCE_SPLIT_PACE] = updated.announceSplitPace
+            prefs[Keys.ANNOUNCE_AVERAGE_PACE] = updated.announceAveragePace
             prefs[Keys.ANNOUNCE_ELEVATION_CHANGE_LAST_SEGMENT] = updated.announceElevationChangeLastSegment
             prefs[Keys.ANNOUNCE_CALORIES] = updated.announceCalories
             prefs[Keys.ANNOUNCE_CLOCK_TIME] = updated.announceClockTime
@@ -155,6 +157,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             announceCadence = prefs[Keys.ANNOUNCE_CADENCE] ?: false,
             announceSegmentPace = prefs[Keys.ANNOUNCE_SEGMENT_PACE] ?: true,
             announceSplitPace = prefs[Keys.ANNOUNCE_SPLIT_PACE] ?: false,
+            announceAveragePace = prefs[Keys.ANNOUNCE_AVERAGE_PACE] ?: false,
             announceElevationChangeLastSegment = prefs[Keys.ANNOUNCE_ELEVATION_CHANGE_LAST_SEGMENT] ?: false,
             announceCalories = prefs[Keys.ANNOUNCE_CALORIES] ?: false,
             announceClockTime = prefs[Keys.ANNOUNCE_CLOCK_TIME] ?: false

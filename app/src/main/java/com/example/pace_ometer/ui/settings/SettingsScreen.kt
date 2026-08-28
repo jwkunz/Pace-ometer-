@@ -313,6 +313,7 @@ private val announcementToggles = listOf(
     AnnouncementToggle("Elapsed time", { it.announceElapsedTime }, { s, v -> s.copy(announceElapsedTime = v) }),
     AnnouncementToggle("Current segment pace", { it.announceSegmentPace }, { s, v -> s.copy(announceSegmentPace = v) }),
     AnnouncementToggle("Split (projected) pace", { it.announceSplitPace }, { s, v -> s.copy(announceSplitPace = v) }),
+    AnnouncementToggle("Average pace", { it.announceAveragePace }, { s, v -> s.copy(announceAveragePace = v) }),
     AnnouncementToggle("Elevation", { it.announceElevation }, { s, v -> s.copy(announceElevation = v) }),
     AnnouncementToggle(
         "Last segment elevation change",

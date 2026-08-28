@@ -81,6 +81,31 @@ class AnnouncementContentBuilderTest {
     }
 
     @Test
+    fun `includes average pace when toggled on`() {
+        val settings = UserSettings(
+            announceDistance = false,
+            announceElapsedTime = false,
+            announceSegmentPace = false,
+            announceAveragePace = true
+        )
+        // 1000m in 300s -> 300 sec/km.
+        val phrases = AnnouncementContentBuilder.build(settings, snapshot)
+        assertTrue(phrases.any { it.startsWith("Average pace") && it.contains("5:00") })
+    }
+
+    @Test
+    fun `omits average pace phrase when toggled on but no distance yet`() {
+        val settings = UserSettings(
+            announceDistance = false,
+            announceElapsedTime = false,
+            announceSegmentPace = false,
+            announceAveragePace = true
+        )
+        val phrases = AnnouncementContentBuilder.build(settings, snapshot.copy(distanceMeters = 0.0))
+        assertFalse(phrases.any { it.startsWith("Average pace") })
+    }
+
+    @Test
     fun `omits heart rate phrase when toggled on but no reading present`() {
         val settings = UserSettings(
             announceDistance = false,

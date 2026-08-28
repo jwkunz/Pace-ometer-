@@ -2,6 +2,7 @@ package com.example.pace_ometer.tts
 
 import com.example.pace_ometer.data.settings.UserSettings
 import com.example.pace_ometer.util.AgeAndHrZoneCalculator
+import com.example.pace_ometer.util.averagePaceSecPerKm
 import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
 import com.example.pace_ometer.util.formatElevationMeters
@@ -42,6 +43,11 @@ object AnnouncementContentBuilder {
         }
         if (settings.announceSplitPace) {
             phrases += "Projected split pace: ${formatPaceSecPerKm(snapshot.splitPaceSecPerKm, unit)}"
+        }
+        if (settings.announceAveragePace) {
+            averagePaceSecPerKm(snapshot.distanceMeters, snapshot.elapsedDurationMs)?.let {
+                phrases += "Average pace: ${formatPaceSecPerKm(it, unit)}"
+            }
         }
         if (settings.announceElevation && snapshot.elevationMeters != null) {
             phrases += "Elevation: ${formatElevationMeters(snapshot.elevationMeters, unit)}"

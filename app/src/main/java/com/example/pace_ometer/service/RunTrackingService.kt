@@ -28,6 +28,7 @@ import com.example.pace_ometer.tts.AnnouncementContentBuilder
 import com.example.pace_ometer.tts.AnnouncementScheduler
 import com.example.pace_ometer.tts.AnnouncementSnapshot
 import com.example.pace_ometer.tts.TtsAnnouncer
+import com.example.pace_ometer.util.averagePaceSecPerKm
 import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
 import com.example.pace_ometer.util.haversineMeters
@@ -244,9 +245,7 @@ class RunTrackingService : Service() {
             val run = runRepository.getRun(state.runId)
             if (run != null) {
                 val endTime = System.currentTimeMillis()
-                val avgPace = if (state.distanceMeters > 0) {
-                    (state.movingDurationMs / 1000.0) / (state.distanceMeters / 1000.0)
-                } else null
+                val avgPace = averagePaceSecPerKm(state.distanceMeters, state.movingDurationMs)
                 runRepository.updateRun(
                     run.copy(
                         endTimeEpochMs = endTime,
