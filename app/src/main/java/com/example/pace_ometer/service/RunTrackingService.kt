@@ -151,6 +151,7 @@ class RunTrackingService : Service() {
             lastRawLocationForMotionCheck = null
             autoPaused = false
             announcementScheduler = AnnouncementScheduler(announcementIntervalMeters(settings))
+            ttsAnnouncer?.setSpeechRate(settings.ttsSpeechRate)
             ttsAnnouncer?.speakAll(listOf("Starting run"))
             mediaSessionManager = RunMediaSessionManager(
                 context = this@RunTrackingService,
@@ -185,6 +186,9 @@ class RunTrackingService : Service() {
                 val newIntervalMeters = announcementIntervalMeters(settings)
                 if (newIntervalMeters != announcementIntervalMeters(currentSettings)) {
                     announcementScheduler?.updateInterval(newIntervalMeters, _runState.value.distanceMeters)
+                }
+                if (settings.ttsSpeechRate != currentSettings.ttsSpeechRate) {
+                    ttsAnnouncer?.setSpeechRate(settings.ttsSpeechRate)
                 }
                 currentSettings = settings
             }

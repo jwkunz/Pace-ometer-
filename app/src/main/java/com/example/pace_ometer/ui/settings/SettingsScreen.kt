@@ -336,6 +336,9 @@ private fun VoiceAnnouncementSection(settings: UserSettings, viewModel: Settings
     var intervalText by remember(settings.announcementIntervalValue) {
         mutableStateOf(settings.announcementIntervalValue.toString())
     }
+    var speechRateText by remember(settings.ttsSpeechRate) {
+        mutableStateOf(settings.ttsSpeechRate.toString())
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         val intervalUnitLabel = if (settings.unitSystem == UnitSystem.IMPERIAL) "mi" else "km"
@@ -348,6 +351,17 @@ private fun VoiceAnnouncementSection(settings: UserSettings, viewModel: Settings
                 }
             },
             label = { Text("Announce every ($intervalUnitLabel)") },
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        OutlinedTextField(
+            value = speechRateText,
+            onValueChange = {
+                speechRateText = it
+                it.toFloatOrNull()?.takeIf { rate -> rate > 0f }
+                    ?.let { rate -> viewModel.updateTtsSpeechRate(rate.coerceIn(0.5f, 3.0f)) }
+            },
+            label = { Text("Speech rate (1.0 = normal, higher is faster)") },
             modifier = Modifier.fillMaxWidth()
         )
 

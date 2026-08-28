@@ -71,7 +71,8 @@ private val helpSections = listOf(
             "elevation, heart rate, heart rate zone, cadence, calories, and clock time. Only " +
             "toggled-on items are spoken, and only if the corresponding data is available (e.g. " +
             "heart rate needs a connected monitor, and heart rate zone additionally needs a " +
-            "birthdate on file)."
+            "birthdate on file). Speech rate controls how fast the announcements are spoken -- " +
+            "1.0 is the engine's normal rate, higher speaks faster."
     ),
     HelpSection(
         "Seasons and personal records",

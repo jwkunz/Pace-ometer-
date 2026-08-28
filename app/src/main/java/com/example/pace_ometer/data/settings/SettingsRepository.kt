@@ -23,6 +23,7 @@ private object Keys {
     val AUTO_PAUSE_ENABLED = booleanPreferencesKey("auto_pause_enabled")
     val AUTO_PAUSE_IDLE_THRESHOLD_SECONDS = intPreferencesKey("auto_pause_idle_threshold_seconds")
     val ANNOUNCEMENT_INTERVAL_VALUE = floatPreferencesKey("announcement_interval_value")
+    val TTS_SPEECH_RATE = floatPreferencesKey("tts_speech_rate")
     val ANNOUNCEMENT_INTERVAL_UNIT = stringPreferencesKey("announcement_interval_unit")
     val ANNOUNCE_DISTANCE = booleanPreferencesKey("announce_distance")
     val ANNOUNCE_ELAPSED_TIME = booleanPreferencesKey("announce_elapsed_time")
@@ -105,6 +106,10 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { prefs -> prefs[Keys.GENDER] = gender.name }
     }
 
+    suspend fun updateTtsSpeechRate(rate: Float) {
+        dataStore.edit { prefs -> prefs[Keys.TTS_SPEECH_RATE] = rate }
+    }
+
     suspend fun updateAnnouncementInterval(value: Float, unit: UnitSystem) {
         dataStore.edit { prefs ->
             prefs[Keys.ANNOUNCEMENT_INTERVAL_VALUE] = value
@@ -146,6 +151,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             autoPauseEnabled = prefs[Keys.AUTO_PAUSE_ENABLED] ?: false,
             autoPauseIdleThresholdSeconds = prefs[Keys.AUTO_PAUSE_IDLE_THRESHOLD_SECONDS] ?: 5,
             announcementIntervalValue = prefs[Keys.ANNOUNCEMENT_INTERVAL_VALUE] ?: 1f,
+            ttsSpeechRate = prefs[Keys.TTS_SPEECH_RATE] ?: 1.0f,
             announcementIntervalUnit = prefs[Keys.ANNOUNCEMENT_INTERVAL_UNIT]?.let {
                 runCatching { UnitSystem.valueOf(it) }.getOrNull()
             } ?: UnitSystem.METRIC,

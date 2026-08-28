@@ -68,6 +68,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { settingsRepository.updateAnnouncementInterval(value, unit) }
     }
 
+    fun updateTtsSpeechRate(rate: Float) {
+        viewModelScope.launch { settingsRepository.updateTtsSpeechRate(rate) }
+    }
+
     fun updateAnnouncementToggle(update: (UserSettings) -> UserSettings) {
         viewModelScope.launch { settingsRepository.updateAnnouncementToggles(update) }
     }

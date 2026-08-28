@@ -9,6 +9,7 @@ class TtsAnnouncer(context: Context) {
 
     private var ready = false
     private val pendingPhrases = mutableListOf<String>()
+    private var pendingSpeechRate: Float? = null
 
     private var tts: TextToSpeech? = TextToSpeech(context) { status ->
         ready = status == TextToSpeech.SUCCESS
@@ -19,6 +20,7 @@ class TtsAnnouncer(context: Context) {
                     .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     .build()
             )
+            pendingSpeechRate?.let { tts?.setSpeechRate(it) }
             pendingPhrases.forEach { speakNow(it) }
             pendingPhrases.clear()
         }
@@ -26,6 +28,12 @@ class TtsAnnouncer(context: Context) {
 
     fun speakAll(phrases: List<String>) {
         phrases.forEach { phrase -> if (ready) speakNow(phrase) else pendingPhrases.add(phrase) }
+    }
+
+    /** 1.0 is the engine's normal rate; higher speaks faster. Android has no literal words-per-
+     *  minute control, so this is the closest equivalent -- a relative multiplier. */
+    fun setSpeechRate(rate: Float) {
+        if (ready) tts?.setSpeechRate(rate) else pendingSpeechRate = rate
     }
 
     private fun speakNow(text: String) {

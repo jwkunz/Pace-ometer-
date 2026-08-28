@@ -17,6 +17,7 @@ data class UserSettings(
     val autoPauseIdleThresholdSeconds: Int = 5,
     val announcementIntervalValue: Float = 1f,
     val announcementIntervalUnit: UnitSystem = UnitSystem.METRIC,
+    val ttsSpeechRate: Float = 1.0f,
     val announceDistance: Boolean = true,
     val announceElapsedTime: Boolean = true,
     val announceElevation: Boolean = false,
