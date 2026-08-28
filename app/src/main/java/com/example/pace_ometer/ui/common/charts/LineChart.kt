@@ -2,13 +2,20 @@ package com.example.pace_ometer.ui.common.charts
 
 import android.graphics.Paint
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -23,14 +30,19 @@ private const val X_GRID_LINES = 4
 
 /**
  * A minimal Canvas-based line chart: x = points[i].first (e.g. elapsed distance or time),
- * y = points[i].second (the metric value). Deliberately simple -- no zoom/pan/multi-series --
- * since that's all the analysis page's pace/HR/elevation/cadence-over-time views need.
+ * y = points[i].second (the metric value). Supports an optional second series sharing the same
+ * axes (e.g. instantaneous vs. average pace) so two closely-related metrics can share one chart
+ * instead of stacking separately -- deliberately simple beyond that, no zoom/pan/N-way series.
  */
 @Composable
 fun LineChart(
     title: String,
     points: List<Pair<Float, Float>>,
     lineColor: Color = MaterialTheme.colorScheme.primary,
+    secondarySeries: List<Pair<Float, Float>>? = null,
+    secondarySeriesLabel: String? = null,
+    secondaryLineColor: Color = MaterialTheme.colorScheme.secondary,
+    primarySeriesLabel: String? = null,
     valueFormatter: (Float) -> String = { "%.1f".format(it) },
     xValueFormatter: (Float) -> String = { "%.1f".format(it) },
     modifier: Modifier = Modifier
@@ -41,11 +53,15 @@ fun LineChart(
             Text("Not enough data", style = MaterialTheme.typography.bodySmall)
             return@Column
         }
+        if (secondarySeriesLabel != null) {
+            Legend(primarySeriesLabel ?: title, lineColor, secondarySeriesLabel, secondaryLineColor)
+        }
 
-        val minY = points.minOf { it.second }
-        val maxY = points.maxOf { it.second }
-        val minX = points.minOf { it.first }
-        val maxX = points.maxOf { it.first }
+        val allPoints = if (secondarySeries != null) points + secondarySeries else points
+        val minY = allPoints.minOf { it.second }
+        val maxY = allPoints.maxOf { it.second }
+        val minX = allPoints.minOf { it.first }
+        val maxX = allPoints.maxOf { it.first }
         val yRange = (maxY - minY).takeIf { it > 0f } ?: 1f
         val xRange = (maxX - minX).takeIf { it > 0f } ?: 1f
 
@@ -128,13 +144,36 @@ fun LineChart(
                 strokeWidth = 1.dp.toPx()
             )
 
-            val path = androidx.compose.ui.graphics.Path()
-            points.forEachIndexed { index, (x, y) ->
-                val plotX = toPlotX(x)
-                val plotY = toPlotY(y)
-                if (index == 0) path.moveTo(plotX, plotY) else path.lineTo(plotX, plotY)
+            fun pathFor(series: List<Pair<Float, Float>>): androidx.compose.ui.graphics.Path {
+                val path = androidx.compose.ui.graphics.Path()
+                series.forEachIndexed { index, (x, y) ->
+                    val plotX = toPlotX(x)
+                    val plotY = toPlotY(y)
+                    if (index == 0) path.moveTo(plotX, plotY) else path.lineTo(plotX, plotY)
+                }
+                return path
             }
-            drawPath(path = path, color = lineColor, style = Stroke(width = 4f))
+
+            drawPath(path = pathFor(points), color = lineColor, style = Stroke(width = 4f))
+            secondarySeries?.takeIf { it.size >= 2 }?.let {
+                drawPath(path = pathFor(it), color = secondaryLineColor, style = Stroke(width = 4f))
+            }
         }
+    }
+}
+
+@Composable
+private fun Legend(primaryLabel: String, primaryColor: Color, secondaryLabel: String, secondaryColor: Color) {
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp), verticalAlignment = Alignment.CenterVertically) {
+        LegendDot(primaryLabel, primaryColor)
+        LegendDot(secondaryLabel, secondaryColor)
+    }
+}
+
+@Composable
+private fun LegendDot(label: String, color: Color) {
+    Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+        Box(modifier = Modifier.size(8.dp).background(color, CircleShape))
+        Text(label, style = MaterialTheme.typography.labelSmall)
     }
 }

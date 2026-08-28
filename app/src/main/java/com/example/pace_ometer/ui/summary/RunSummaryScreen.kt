@@ -33,6 +33,14 @@ import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
 
+/**
+ * Above this, a plotted pace value is almost certainly a GPS-startup artifact (the fusion
+ * engine's smoothing hasn't converged yet) rather than genuine movement -- left in the
+ * underlying data/exports, just excluded from this chart so one spike doesn't compress the rest
+ * of a run's real pace data into an invisible flat line near the bottom of the y-axis.
+ */
+private const val MAX_PLAUSIBLE_PACE_SEC_PER_KM = 1200f
+
 @Composable
 fun RunSummaryScreen(
     runId: Long,
@@ -99,24 +107,21 @@ fun RunSummaryScreen(
 
             val startTime = run?.startTimeEpochMs ?: samples.firstOrNull()?.timestampEpochMs ?: 0L
 
+            val pacePoints = samples.mapNotNull { s ->
+                s.instantaneousPaceSecPerKm?.toFloat()
+                    ?.takeIf { it in 0f..MAX_PLAUSIBLE_PACE_SEC_PER_KM }
+                    ?.let { (s.cumulativeDistanceMeters / 1000f).toFloat() to it }
+            }
+            val averagePaceOverDistance by viewModel.averagePaceOverDistance.collectAsState()
             LineChart(
                 title = "Pace over distance",
-                points = samples.mapNotNull { s ->
-                    s.instantaneousPaceSecPerKm?.let { (s.cumulativeDistanceMeters / 1000f).toFloat() to it.toFloat() }
-                },
+                points = pacePoints,
+                secondarySeries = averagePaceOverDistance.takeIf { it.size >= 2 },
+                secondarySeriesLabel = "Average".takeIf { averagePaceOverDistance.size >= 2 },
+                primarySeriesLabel = "Current",
                 valueFormatter = { "${it.toInt()}s/km" },
                 xValueFormatter = { "%.1fkm".format(it) }
             )
-
-            val averagePaceOverDistance by viewModel.averagePaceOverDistance.collectAsState()
-            if (averagePaceOverDistance.size >= 2) {
-                LineChart(
-                    title = "Average pace over distance",
-                    points = averagePaceOverDistance,
-                    valueFormatter = { "${it.toInt()}s/km" },
-                    xValueFormatter = { "%.1fkm".format(it) }
-                )
-            }
 
             LineChart(
                 title = "Elevation over distance",

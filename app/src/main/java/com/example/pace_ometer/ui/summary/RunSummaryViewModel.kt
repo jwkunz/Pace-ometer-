@@ -14,6 +14,13 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 
+/**
+ * Average pace is elapsed-time / distance, so it's numerically unstable (and not meaningfully
+ * "an average" yet) for the first few meters of a run -- excluding those samples keeps an early
+ * GPS-startup transient from dominating the chart's whole y-axis scale.
+ */
+private const val MIN_DISTANCE_METERS_FOR_AVERAGE_PACE = 50.0
+
 class RunSummaryViewModel(application: Application, runId: Long) : AndroidViewModel(application) {
 
     private val app = application as PaceometerApp
@@ -60,6 +67,7 @@ class RunSummaryViewModel(application: Application, runId: Long) : AndroidViewMo
     val averagePaceOverDistance: StateFlow<List<Pair<Float, Float>>> = combine(run, samples) { r, sampleList ->
         val startTime = r?.startTimeEpochMs ?: return@combine emptyList()
         sampleList.mapNotNull { sample ->
+            if (sample.cumulativeDistanceMeters < MIN_DISTANCE_METERS_FOR_AVERAGE_PACE) return@mapNotNull null
             val elapsedMs = sample.timestampEpochMs - startTime
             averagePaceSecPerKm(sample.cumulativeDistanceMeters, elapsedMs)?.let { avgPace ->
                 (sample.cumulativeDistanceMeters / 1000f).toFloat() to avgPace.toFloat()
