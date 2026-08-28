@@ -482,6 +482,7 @@ class RunTrackingService : Service() {
                     cumulativeDistanceMeters = fused.cumulativeDistanceMeters,
                     instantaneousPaceSecPerKm = fused.instantaneousPaceSecPerKm,
                     heartRateBpm = state.heartRateBpm,
+                    cadenceSpm = state.cadenceSpm,
                     sourceFlags = fused.sourceFlags
                 )
             )

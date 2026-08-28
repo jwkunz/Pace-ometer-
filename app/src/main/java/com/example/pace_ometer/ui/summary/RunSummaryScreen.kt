@@ -108,6 +108,16 @@ fun RunSummaryScreen(
                 xValueFormatter = { "%.1fkm".format(it) }
             )
 
+            val averagePaceOverDistance by viewModel.averagePaceOverDistance.collectAsState()
+            if (averagePaceOverDistance.size >= 2) {
+                LineChart(
+                    title = "Average pace over distance",
+                    points = averagePaceOverDistance,
+                    valueFormatter = { "${it.toInt()}s/km" },
+                    xValueFormatter = { "%.1fkm".format(it) }
+                )
+            }
+
             LineChart(
                 title = "Elevation over distance",
                 points = samples.mapNotNull { s ->

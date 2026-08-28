@@ -8,6 +8,7 @@ import com.example.pace_ometer.calories.CalorieEstimator
 import com.example.pace_ometer.data.db.entity.RunEntity
 import com.example.pace_ometer.data.db.entity.RunSampleEntity
 import com.example.pace_ometer.data.settings.UserSettings
+import com.example.pace_ometer.util.averagePaceSecPerKm
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -49,5 +50,20 @@ class RunSummaryViewModel(application: Application, runId: Long) : AndroidViewMo
             points += elapsedMinutes to cumulativeCalories.toFloat()
         }
         points
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    /**
+     * Cumulative average pace (total distance / total elapsed time up to that point) vs.
+     * distance -- distinct from the instantaneous "Pace over distance" chart, which shows
+     * point-in-time speed rather than the running average.
+     */
+    val averagePaceOverDistance: StateFlow<List<Pair<Float, Float>>> = combine(run, samples) { r, sampleList ->
+        val startTime = r?.startTimeEpochMs ?: return@combine emptyList()
+        sampleList.mapNotNull { sample ->
+            val elapsedMs = sample.timestampEpochMs - startTime
+            averagePaceSecPerKm(sample.cumulativeDistanceMeters, elapsedMs)?.let { avgPace ->
+                (sample.cumulativeDistanceMeters / 1000f).toFloat() to avgPace.toFloat()
+            }
+        }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 }
