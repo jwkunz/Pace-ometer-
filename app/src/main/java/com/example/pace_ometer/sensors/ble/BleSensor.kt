@@ -17,8 +17,9 @@ interface BleSensor<T> {
 data class HeartRateReading(val bpm: Int, val timestampMs: Long)
 
 /**
- * Cadence in steps-per-minute plus the raw wheel/crank-style counters the RSC Measurement
- * characteristic exposes, kept for a future, hardware-validated implementation.
+ * Cadence -- steps-per-minute from [CadenceGattSensor] (running), or crank revolutions-per-minute
+ * from [CyclingCadenceGattSensor] (cycling) -- plus the speed the sensor itself reports, if any.
+ * Shared shape between both since a run only ever pairs one cadence source at a time.
  */
 data class CadenceReading(val cadenceSpm: Int?, val speedMps: Float?, val timestampMs: Long)
 
@@ -30,6 +31,7 @@ object BleServiceUuids {
     val RSC_MEASUREMENT: UUID = UUID.fromString("00002A53-0000-1000-8000-00805f9b34fb")
 
     val CYCLING_SPEED_AND_CADENCE_SERVICE: UUID = UUID.fromString("00001816-0000-1000-8000-00805f9b34fb")
+    val CSC_MEASUREMENT: UUID = UUID.fromString("00002A5B-0000-1000-8000-00805f9b34fb")
     val CYCLING_POWER_SERVICE: UUID = UUID.fromString("00001818-0000-1000-8000-00805f9b34fb")
     val FITNESS_MACHINE_SERVICE: UUID = UUID.fromString("00001826-0000-1000-8000-00805f9b34fb")
 

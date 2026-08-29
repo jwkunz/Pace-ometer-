@@ -53,8 +53,9 @@ private val helpSections = listOf(
         "Heart rate monitor",
         "In Settings, tap \"Scan for heart rate monitor\" to find a nearby Bluetooth heart-rate " +
             "strap and connect it. Once paired, your live BPM is shown during runs and its average " +
-            "and max are saved with each run. A cadence (footpod) sensor isn't supported yet, but " +
-            "the app is built to add one without needing to reconnect your other sensors."
+            "and max are saved with each run. A running cadence (footpod) or cycling cadence " +
+            "sensor isn't supported yet, but the app is built to add either without needing to " +
+            "reconnect your other sensors."
     ),
     HelpSection(
         "Auto-pause",
