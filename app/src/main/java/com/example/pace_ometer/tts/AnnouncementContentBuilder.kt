@@ -1,5 +1,6 @@
 package com.example.pace_ometer.tts
 
+import com.example.pace_ometer.data.ActivityType
 import com.example.pace_ometer.data.settings.UserSettings
 import com.example.pace_ometer.util.AgeAndHrZoneCalculator
 import com.example.pace_ometer.util.averagePaceSecPerKm
@@ -7,6 +8,7 @@ import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatElevationMeters
 import com.example.pace_ometer.util.speakableDurationMs
 import com.example.pace_ometer.util.speakablePaceSecPerKm
+import com.example.pace_ometer.util.speakableSpeedFromPaceSecPerKm
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -22,7 +24,8 @@ data class AnnouncementSnapshot(
     val segmentPaceSecPerKm: Double?,
     val splitPaceSecPerKm: Double?,
     val cumulativeCalories: Double?,
-    val clockTimeEpochMs: Long
+    val clockTimeEpochMs: Long,
+    val activityType: ActivityType = ActivityType.RUNNING
 )
 
 /** Assembles the spoken phrases for one announcement, in a fixed order, honoring per-item toggles. */
@@ -38,15 +41,25 @@ object AnnouncementContentBuilder {
         if (settings.announceElapsedTime) {
             phrases += "Time: ${speakableDurationMs(snapshot.elapsedDurationMs)}"
         }
+        // Cycling reads more naturally as speed ("24 kilometers per hour") than running-style
+        // pace ("2 minutes 30 seconds per kilometer" -- technically correct but an odd way to
+        // hear a bike ride described).
+        val usesPace = snapshot.activityType.usesPaceDisplay
         if (settings.announceSegmentPace) {
-            speakablePaceSecPerKm(snapshot.segmentPaceSecPerKm, unit)?.let { phrases += "Current pace: $it" }
+            val phrase = if (usesPace) speakablePaceSecPerKm(snapshot.segmentPaceSecPerKm, unit) else null
+            val speedPhrase = if (!usesPace) speakableSpeedFromPaceSecPerKm(snapshot.segmentPaceSecPerKm, unit) else null
+            (phrase ?: speedPhrase)?.let { phrases += "Current ${if (usesPace) "pace" else "speed"}: $it" }
         }
         if (settings.announceSplitPace) {
-            speakablePaceSecPerKm(snapshot.splitPaceSecPerKm, unit)?.let { phrases += "Projected split pace: $it" }
+            val phrase = if (usesPace) speakablePaceSecPerKm(snapshot.splitPaceSecPerKm, unit) else null
+            val speedPhrase = if (!usesPace) speakableSpeedFromPaceSecPerKm(snapshot.splitPaceSecPerKm, unit) else null
+            (phrase ?: speedPhrase)?.let { phrases += "Projected ${if (usesPace) "split pace" else "speed"}: $it" }
         }
         if (settings.announceAveragePace) {
             val avgPace = averagePaceSecPerKm(snapshot.distanceMeters, snapshot.elapsedDurationMs)
-            speakablePaceSecPerKm(avgPace, unit)?.let { phrases += "Average pace: $it" }
+            val phrase = if (usesPace) speakablePaceSecPerKm(avgPace, unit) else null
+            val speedPhrase = if (!usesPace) speakableSpeedFromPaceSecPerKm(avgPace, unit) else null
+            (phrase ?: speedPhrase)?.let { phrases += "Average ${if (usesPace) "pace" else "speed"}: $it" }
         }
         if (settings.announceElevation && snapshot.elevationMeters != null) {
             phrases += "Elevation: ${formatElevationMeters(snapshot.elevationMeters, unit)}"

@@ -50,6 +50,25 @@ fun speakablePaceSecPerKm(secPerKm: Double?, unitSystem: UnitSystem = UnitSystem
     return "$minutePart$secondPart per $unitLabel"
 }
 
+/** Formats a pace given in seconds-per-km as a speed in the display unit's "X.X km/h"/"X.X mph" form -- the natural way to express cycling speed, vs. running-style min:sec pace. */
+fun formatSpeedFromPaceSecPerKm(secPerKm: Double?, unitSystem: UnitSystem = UnitSystem.METRIC): String {
+    val unitLabel = if (unitSystem == UnitSystem.IMPERIAL) "mph" else "km/h"
+    if (secPerKm == null || secPerKm <= 0 || secPerKm.isInfinite() || secPerKm.isNaN()) return "-- $unitLabel"
+    val speedKmh = 3600.0 / secPerKm
+    val value = if (unitSystem == UnitSystem.IMPERIAL) speedKmh / (METERS_PER_MILE / METERS_PER_KM) else speedKmh
+    return "%.1f %s".format(value, unitLabel)
+}
+
+/** Speech-friendly speed phrasing (e.g. "24.1 kilometers per hour"), for activities like cycling
+ *  where speed reads more naturally than running-style pace. */
+fun speakableSpeedFromPaceSecPerKm(secPerKm: Double?, unitSystem: UnitSystem = UnitSystem.METRIC): String? {
+    if (secPerKm == null || secPerKm <= 0 || secPerKm.isInfinite() || secPerKm.isNaN()) return null
+    val speedKmh = 3600.0 / secPerKm
+    val value = if (unitSystem == UnitSystem.IMPERIAL) speedKmh / (METERS_PER_MILE / METERS_PER_KM) else speedKmh
+    val unitLabel = if (unitSystem == UnitSystem.IMPERIAL) "miles per hour" else "kilometers per hour"
+    return "%.1f %s".format(value, unitLabel)
+}
+
 fun kgToDisplayWeight(kg: Float, unitSystem: UnitSystem): Float =
     if (unitSystem == UnitSystem.IMPERIAL) kg * 2.20462f else kg
 
