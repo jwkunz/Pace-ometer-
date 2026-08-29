@@ -33,6 +33,23 @@ fun formatPaceSecPerKm(secPerKm: Double?, unitSystem: UnitSystem = UnitSystem.ME
     return "%d:%02d /%s".format(minutes, seconds, unitLabel)
 }
 
+/**
+ * Speech-friendly pace phrasing, e.g. "6 minutes 30 seconds per kilometer". Deliberately avoids
+ * the "6:30" display format: Android's TTS text-normalizer reads an "M:SS"-shaped string as a
+ * clock time (speaking "6:00" as "six o'clock") rather than a duration.
+ */
+fun speakablePaceSecPerKm(secPerKm: Double?, unitSystem: UnitSystem = UnitSystem.METRIC): String? {
+    if (secPerKm == null || secPerKm.isInfinite() || secPerKm.isNaN()) return null
+    val secPerUnit = if (unitSystem == UnitSystem.IMPERIAL) secPerKm * (METERS_PER_MILE / METERS_PER_KM) else secPerKm
+    val totalSeconds = secPerUnit.roundToInt()
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    val unitLabel = if (unitSystem == UnitSystem.IMPERIAL) "mile" else "kilometer"
+    val minutePart = "$minutes minute${if (minutes == 1) "" else "s"}"
+    val secondPart = if (seconds > 0) " $seconds second${if (seconds == 1) "" else "s"}" else ""
+    return "$minutePart$secondPart per $unitLabel"
+}
+
 fun kgToDisplayWeight(kg: Float, unitSystem: UnitSystem): Float =
     if (unitSystem == UnitSystem.IMPERIAL) kg * 2.20462f else kg
 

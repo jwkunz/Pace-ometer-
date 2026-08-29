@@ -6,7 +6,7 @@ import com.example.pace_ometer.util.averagePaceSecPerKm
 import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
 import com.example.pace_ometer.util.formatElevationMeters
-import com.example.pace_ometer.util.formatPaceSecPerKm
+import com.example.pace_ometer.util.speakablePaceSecPerKm
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -39,15 +39,14 @@ object AnnouncementContentBuilder {
             phrases += "Time: ${formatDurationMs(snapshot.elapsedDurationMs)}"
         }
         if (settings.announceSegmentPace) {
-            phrases += "Current pace: ${formatPaceSecPerKm(snapshot.segmentPaceSecPerKm, unit)}"
+            speakablePaceSecPerKm(snapshot.segmentPaceSecPerKm, unit)?.let { phrases += "Current pace: $it" }
         }
         if (settings.announceSplitPace) {
-            phrases += "Projected split pace: ${formatPaceSecPerKm(snapshot.splitPaceSecPerKm, unit)}"
+            speakablePaceSecPerKm(snapshot.splitPaceSecPerKm, unit)?.let { phrases += "Projected split pace: $it" }
         }
         if (settings.announceAveragePace) {
-            averagePaceSecPerKm(snapshot.distanceMeters, snapshot.elapsedDurationMs)?.let {
-                phrases += "Average pace: ${formatPaceSecPerKm(it, unit)}"
-            }
+            val avgPace = averagePaceSecPerKm(snapshot.distanceMeters, snapshot.elapsedDurationMs)
+            speakablePaceSecPerKm(avgPace, unit)?.let { phrases += "Average pace: $it" }
         }
         if (settings.announceElevation && snapshot.elevationMeters != null) {
             phrases += "Elevation: ${formatElevationMeters(snapshot.elevationMeters, unit)}"

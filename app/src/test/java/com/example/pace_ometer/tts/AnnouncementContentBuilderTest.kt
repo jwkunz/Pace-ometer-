@@ -90,7 +90,7 @@ class AnnouncementContentBuilderTest {
         )
         // 1000m in 300s -> 300 sec/km.
         val phrases = AnnouncementContentBuilder.build(settings, snapshot)
-        assertTrue(phrases.any { it.startsWith("Average pace") && it.contains("5:00") })
+        assertTrue(phrases.any { it.startsWith("Average pace") && it.contains("5 minutes") })
     }
 
     @Test
