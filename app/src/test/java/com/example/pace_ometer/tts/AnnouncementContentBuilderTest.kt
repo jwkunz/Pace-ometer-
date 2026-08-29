@@ -106,6 +106,21 @@ class AnnouncementContentBuilderTest {
     }
 
     @Test
+    fun `elapsed time phrase never contains a colon`() {
+        val settings = UserSettings(
+            announceDistance = false,
+            announceElapsedTime = true,
+            announceSegmentPace = false
+        )
+        // 5 minutes elapsed -> must not render as "5:00", which TTS reads as a clock time.
+        val phrases = AnnouncementContentBuilder.build(settings, snapshot)
+        val timePhrase = phrases.first { it.startsWith("Time:") }
+        val timeValue = timePhrase.removePrefix("Time:")
+        assertFalse(timeValue.contains(":"))
+        assertTrue(timeValue.contains("5 minutes"))
+    }
+
+    @Test
     fun `omits heart rate phrase when toggled on but no reading present`() {
         val settings = UserSettings(
             announceDistance = false,

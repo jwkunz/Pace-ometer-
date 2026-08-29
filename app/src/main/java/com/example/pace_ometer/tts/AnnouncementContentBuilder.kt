@@ -4,8 +4,8 @@ import com.example.pace_ometer.data.settings.UserSettings
 import com.example.pace_ometer.util.AgeAndHrZoneCalculator
 import com.example.pace_ometer.util.averagePaceSecPerKm
 import com.example.pace_ometer.util.formatDistanceMeters
-import com.example.pace_ometer.util.formatDurationMs
 import com.example.pace_ometer.util.formatElevationMeters
+import com.example.pace_ometer.util.speakableDurationMs
 import com.example.pace_ometer.util.speakablePaceSecPerKm
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -36,7 +36,7 @@ object AnnouncementContentBuilder {
             phrases += "Distance: ${formatDistanceMeters(snapshot.distanceMeters, unit)}"
         }
         if (settings.announceElapsedTime) {
-            phrases += "Time: ${formatDurationMs(snapshot.elapsedDurationMs)}"
+            phrases += "Time: ${speakableDurationMs(snapshot.elapsedDurationMs)}"
         }
         if (settings.announceSegmentPace) {
             speakablePaceSecPerKm(snapshot.segmentPaceSecPerKm, unit)?.let { phrases += "Current pace: $it" }
