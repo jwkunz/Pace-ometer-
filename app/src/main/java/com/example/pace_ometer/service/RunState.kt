@@ -1,10 +1,13 @@
 package com.example.pace_ometer.service
 
+import com.example.pace_ometer.data.ActivityType
+
 enum class RunPhase { IDLE, RUNNING, PAUSED, STOPPED }
 
 data class RunState(
     val phase: RunPhase = RunPhase.IDLE,
     val runId: Long? = null,
+    val activityType: ActivityType = ActivityType.RUNNING,
     val distanceMeters: Double = 0.0,
     val movingDurationMs: Long = 0,
     val elevationMeters: Double? = null,

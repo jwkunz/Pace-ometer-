@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.ServiceConnection
 import android.os.IBinder
 import androidx.core.content.ContextCompat
+import com.example.pace_ometer.data.ActivityType
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -53,7 +54,13 @@ class RunServiceConnection(private val context: Context) {
         bound = false
     }
 
-    fun start() = sendAction(RunTrackingService.ACTION_START)
+    fun start(activityType: ActivityType) {
+        val intent = Intent(context, RunTrackingService::class.java)
+            .setAction(RunTrackingService.ACTION_START)
+            .putExtra(RunTrackingService.EXTRA_ACTIVITY_TYPE, activityType.name)
+        ContextCompat.startForegroundService(context, intent)
+    }
+
     fun pause() = sendAction(RunTrackingService.ACTION_PAUSE)
     fun resume() = sendAction(RunTrackingService.ACTION_RESUME)
     fun stop() = sendAction(RunTrackingService.ACTION_STOP)

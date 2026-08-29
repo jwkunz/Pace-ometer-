@@ -10,12 +10,18 @@ class RunRepository(
     private val runDao: RunDao,
     private val runSampleDao: RunSampleDao
 ) {
-    suspend fun startRun(startTimeEpochMs: Long, unitSystem: String, bodyWeightKg: Double?): Long =
+    suspend fun startRun(
+        startTimeEpochMs: Long,
+        unitSystem: String,
+        bodyWeightKg: Double?,
+        activityType: String
+    ): Long =
         runDao.insert(
             RunEntity(
                 startTimeEpochMs = startTimeEpochMs,
                 unitSystemAtRunTime = unitSystem,
-                bodyWeightKgAtRunTime = bodyWeightKg
+                bodyWeightKgAtRunTime = bodyWeightKg,
+                activityType = activityType
             )
         )
 

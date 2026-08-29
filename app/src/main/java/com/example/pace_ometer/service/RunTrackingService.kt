@@ -10,6 +10,7 @@ import android.os.Binder
 import android.os.IBinder
 import androidx.core.content.ContextCompat
 import com.example.pace_ometer.PaceometerApp
+import com.example.pace_ometer.data.ActivityType
 import com.example.pace_ometer.calories.CalorieEstimator
 import com.example.pace_ometer.data.db.entity.RunSampleEntity
 import com.example.pace_ometer.data.repository.RunRepository
@@ -50,12 +51,19 @@ class RunTrackingService : Service() {
         const val ACTION_PAUSE = "com.example.pace_ometer.action.PAUSE"
         const val ACTION_RESUME = "com.example.pace_ometer.action.RESUME"
         const val ACTION_STOP = "com.example.pace_ometer.action.STOP"
+        const val EXTRA_ACTIVITY_TYPE = "com.example.pace_ometer.extra.ACTIVITY_TYPE"
 
         /** Health Connect is a synced data store, not a live stream -- poll rather than subscribe. */
         private const val HEALTH_CONNECT_POLL_INTERVAL_MS = 10_000L
 
         /** Below this, GPS noise/drift while stationary shouldn't count as real motion. */
         private const val MIN_MOTION_SPEED_MPS = 0.3
+
+        /** Running/walking GPS-jump rejection cap -- a real runner/walker won't exceed this. */
+        private const val MAX_PLAUSIBLE_SPEED_MPS_FOOT = 7.0
+
+        /** Cycling GPS-jump rejection cap -- generous enough for a fast descent, not just flat riding. */
+        private const val MAX_PLAUSIBLE_SPEED_MPS_CYCLING = 25.0
     }
 
     inner class LocalBinder : Binder() {
@@ -103,6 +111,8 @@ class RunTrackingService : Service() {
     /** When motion was first detected again after an auto-pause -- null while idle/not paused. */
     private var motionSustainedSinceMs: Long? = null
 
+    private var currentActivityType: ActivityType = ActivityType.RUNNING
+
     override fun onCreate() {
         super.onCreate()
         val app = application as PaceometerApp
@@ -123,7 +133,12 @@ class RunTrackingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_START -> startRun()
+            ACTION_START -> {
+                val activityType = intent.getStringExtra(EXTRA_ACTIVITY_TYPE)
+                    ?.let { runCatching { ActivityType.valueOf(it) }.getOrNull() }
+                    ?: ActivityType.RUNNING
+                startRun(activityType)
+            }
             ACTION_PAUSE -> pauseRun()
             ACTION_RESUME -> resumeRun()
             ACTION_STOP -> stopRun()
@@ -131,17 +146,25 @@ class RunTrackingService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun startRun() {
+    private fun startRun(activityType: ActivityType) {
         if (_runState.value.phase != RunPhase.IDLE) return
         serviceScope.launch {
             val settings = settingsRepository.userSettings.first()
             val runId = runRepository.startRun(
                 startTimeEpochMs = System.currentTimeMillis(),
                 unitSystem = settings.unitSystem.name,
-                bodyWeightKg = settings.bodyWeightKg.toDouble()
+                bodyWeightKg = settings.bodyWeightKg.toDouble(),
+                activityType = activityType.name
             )
-            _runState.value = RunState(phase = RunPhase.RUNNING, runId = runId)
-            fusionEngine = DistanceFusionEngine()
+            currentActivityType = activityType
+            _runState.value = RunState(phase = RunPhase.RUNNING, runId = runId, activityType = activityType)
+            fusionEngine = DistanceFusionEngine(
+                maxPlausibleSpeedMps = if (activityType == ActivityType.CYCLING) {
+                    MAX_PLAUSIBLE_SPEED_MPS_CYCLING
+                } else {
+                    MAX_PLAUSIBLE_SPEED_MPS_FOOT
+                }
+            )
             lastElevationMeters = null
             heartRateSum = 0
             heartRateCount = 0
@@ -156,7 +179,7 @@ class RunTrackingService : Service() {
             motionSustainedSinceMs = null
             announcementScheduler = AnnouncementScheduler(announcementIntervalMeters(settings))
             ttsAnnouncer?.setSpeechRate(settings.ttsSpeechRate)
-            ttsAnnouncer?.speakAll(listOf("Starting run"))
+            ttsAnnouncer?.speakAll(listOf("Starting your ${activityType.noun}"))
             mediaSessionManager = RunMediaSessionManager(
                 context = this@RunTrackingService,
                 onPlay = { resumeRun() },
@@ -168,7 +191,9 @@ class RunTrackingService : Service() {
                 RunNotificationFactory.build(this@RunTrackingService, RunPhase.RUNNING, "0.00 km", "0:00")
             )
             beginLocationUpdates()
-            beginStepUpdates()
+            // Step detection/dead-reckoning is a running/walking-only signal -- cycling has no
+            // discrete steps, so skip the sensor subscription entirely rather than feed it noise.
+            if (activityType.usesStepSensing) beginStepUpdates()
             beginTicker()
             beginSettingsUpdates()
             if (settings.heartRateDeviceAddress != null) {
@@ -213,7 +238,7 @@ class RunTrackingService : Service() {
         serviceScope.launch(Dispatchers.Main) { mediaSessionManager?.setPlaying(false) }
         // Announced here (not just at the auto-pause call site) so a manual tap of the Pause
         // button, or a connected headset's button, gets the same spoken confirmation.
-        ttsAnnouncer?.speakAll(listOf("Pausing run"))
+        ttsAnnouncer?.speakAll(listOf("Pausing your ${currentActivityType.noun}"))
         updateNotification()
     }
 
@@ -230,7 +255,7 @@ class RunTrackingService : Service() {
         serviceScope.launch(Dispatchers.Main) { mediaSessionManager?.setPlaying(true) }
         // Announced here (not just at the auto-resume call site) so a manual tap of the Resume
         // button, or a connected headset's button, gets the same spoken confirmation.
-        ttsAnnouncer?.speakAll(listOf("Starting run"))
+        ttsAnnouncer?.speakAll(listOf("Starting your ${currentActivityType.noun}"))
         updateNotification()
     }
 
@@ -369,7 +394,7 @@ class RunTrackingService : Service() {
                     // total and the announced total stay continuously in sync (no separate per-segment calc).
                     val speedKmh = state.currentPaceSecPerKm?.takeIf { it > 0 }?.let { 3600.0 / it } ?: 0.0
                     val caloriesIncrement = CalorieEstimator.estimateSegmentCalories(
-                        speedKmh, currentSettings.bodyWeightKg.toDouble(), delta
+                        speedKmh, currentSettings.bodyWeightKg.toDouble(), delta, currentActivityType
                     )
                     _runState.value = state.copy(
                         movingDurationMs = state.movingDurationMs + delta,
@@ -523,7 +548,8 @@ class RunTrackingService : Service() {
             segmentPaceSecPerKm = state.segmentPaceSecPerKm,
             splitPaceSecPerKm = fused.instantaneousPaceSecPerKm,
             cumulativeCalories = state.caloriesBurned,
-            clockTimeEpochMs = System.currentTimeMillis()
+            clockTimeEpochMs = System.currentTimeMillis(),
+            activityType = currentActivityType
         )
         ttsAnnouncer?.speakAll(AnnouncementContentBuilder.build(currentSettings, snapshot))
 
