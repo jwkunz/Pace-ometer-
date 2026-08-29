@@ -26,6 +26,14 @@ private val helpSections = listOf(
             "All distances, paces, and weights throughout the app follow this choice."
     ),
     HelpSection(
+        "Activity type",
+        "Pick Running, Walking, or Cycling on the Home screen before starting. It changes more " +
+            "than the label: cycling shows speed instead of running-style pace (live, spoken, " +
+            "and in the run summary), uses its own calorie formula tuned for cycling effort, " +
+            "and skips step-based metrics (steps, cadence, stride length) entirely, since " +
+            "cycling has no discrete steps to sense."
+    ),
+    HelpSection(
         "Body weight, height, birthdate, gender",
         "Body weight drives the calorie estimate for each run. Birthdate is used to estimate your " +
             "maximum heart rate and heart-rate training zones. Height is optional and only used to " +
@@ -39,10 +47,11 @@ private val helpSections = listOf(
     ),
     HelpSection(
         "Physical activity permission",
-        "Optional but recommended -- without it, Android silently blocks the phone's step " +
-            "sensor entirely, so Steps, Cadence, Stride length, and the accelerometer pace " +
-            "fallback during GPS gaps won't work. A run still tracks fine via GPS alone without " +
-            "this permission; it's only those specific step-based metrics that need it."
+        "Only requested for Running/Walking (cycling doesn't need it). Optional but " +
+            "recommended -- without it, Android silently blocks the phone's step sensor " +
+            "entirely, so Steps, Cadence, Stride length, and the accelerometer pace fallback " +
+            "during GPS gaps won't work. A run still tracks fine via GPS alone without this " +
+            "permission; it's only those specific step-based metrics that need it."
     ),
     HelpSection(
         "Saving a run",
@@ -64,8 +73,8 @@ private val helpSections = listOf(
             "has been sustained for a separately configurable number of seconds (3 by default) -- " +
             "a brief blip of motion while still stationary won't resume it early. Pausing or " +
             "resuming, whether automatic or by tapping the button yourself, always announces " +
-            "\"Pausing run\" / \"Starting run\". A pause you trigger yourself is never " +
-            "auto-resumed for you."
+            "\"Pausing your run\" / \"Starting your run\" (or \"walk\"/\"ride\", matching the " +
+            "activity). A pause you trigger yourself is never auto-resumed for you."
     ),
     HelpSection(
         "Voice announcements",
@@ -80,9 +89,11 @@ private val helpSections = listOf(
     HelpSection(
         "Seasons and personal records",
         "Every run you save is automatically checked against your personal records -- no separate " +
-            "submission step. Records are tracked both All-Time and per season. Add a season in " +
-            "Settings with a name and start date; a run belongs to whichever season most recently " +
-            "started before it. View records for any scope from the Personal Records screen."
+            "submission step. Records are tracked both All-Time and per season, separately for " +
+            "each activity type (a fast cycling split won't overwrite a running record, or vice " +
+            "versa). Add a season in Settings with a name and start date; a run belongs to " +
+            "whichever season most recently started before it. View records for any activity/" +
+            "scope combination from the Personal Records screen."
     ),
     HelpSection(
         "Exporting your data",

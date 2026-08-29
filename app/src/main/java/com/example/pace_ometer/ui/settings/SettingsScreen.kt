@@ -147,7 +147,8 @@ fun SettingsScreen(
             ) {
                 Text(
                     "Automatically pause when no motion is detected, and resume when it picks " +
-                        "back up. Announces \"Pausing run\" / \"Starting run\".",
+                        "back up. Announces \"Pausing your run\" / \"Starting your run\" (or " +
+                        "\"walk\"/\"ride\", matching the activity).",
                     style = MaterialTheme.typography.bodySmall,
                     modifier = Modifier.weight(1f)
                 )

@@ -21,17 +21,22 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.example.pace_ometer.PaceometerApp
+import com.example.pace_ometer.data.ActivityType
 import com.example.pace_ometer.ui.common.SimpleViewModelFactory
 import com.example.pace_ometer.ui.common.charts.LineChart
 import com.example.pace_ometer.util.AgeAndHrZoneCalculator
 import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
 import com.example.pace_ometer.util.formatPaceSecPerKm
+import com.example.pace_ometer.util.formatSpeedFromPaceSecPerKm
 import com.example.pace_ometer.util.formatStepsPerDistanceUnit
 import org.osmdroid.util.GeoPoint
 import org.osmdroid.views.MapView
 import org.osmdroid.views.overlay.Polyline
 import org.osmdroid.tileprovider.tilesource.TileSourceFactory
+
+private fun runActivityType(activityType: String): ActivityType =
+    runCatching { ActivityType.valueOf(activityType) }.getOrDefault(ActivityType.RUNNING)
 
 /**
  * Above this, a plotted pace value is almost certainly a GPS-startup artifact (the fusion
@@ -55,8 +60,9 @@ fun RunSummaryScreen(
     val run by viewModel.run.collectAsState()
     val samples by viewModel.samples.collectAsState()
     val settings by viewModel.settings.collectAsState()
+    val activityType = run?.activityType?.let(::runActivityType) ?: ActivityType.RUNNING
 
-    Scaffold(topBar = { TopAppBar(title = { Text("Run Summary") }) }) { padding ->
+    Scaffold(topBar = { TopAppBar(title = { Text("${activityType.displayName} Summary") }) }) { padding ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -70,7 +76,10 @@ fun RunSummaryScreen(
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                         Text(formatDistanceMeters(r.totalDistanceMeters), style = MaterialTheme.typography.headlineSmall)
                         Text(formatDurationMs(r.movingDurationMs))
-                        Text("Avg pace: ${formatPaceSecPerKm(r.averagePaceSecPerKm)}")
+                        Text(
+                            if (activityType.usesPaceDisplay) "Avg pace: ${formatPaceSecPerKm(r.averagePaceSecPerKm)}"
+                            else "Avg speed: ${formatSpeedFromPaceSecPerKm(r.averagePaceSecPerKm)}"
+                        )
                         r.avgHeartRateBpm?.let { avgBpm ->
                             Text("Avg heart rate: $avgBpm bpm (max ${r.maxHeartRateBpm})")
                             val birthDateEpochDay = settings.birthDateEpochDay
@@ -113,15 +122,35 @@ fun RunSummaryScreen(
                     ?.let { (s.cumulativeDistanceMeters / 1000f).toFloat() to it }
             }
             val averagePaceOverDistance by viewModel.averagePaceOverDistance.collectAsState()
-            LineChart(
-                title = "Pace over distance",
-                points = pacePoints,
-                secondarySeries = averagePaceOverDistance.takeIf { it.size >= 2 },
-                secondarySeriesLabel = "Average".takeIf { averagePaceOverDistance.size >= 2 },
-                primarySeriesLabel = "Current",
-                valueFormatter = { "${it.toInt()}s/km" },
-                xValueFormatter = { "%.1fkm".format(it) }
-            )
+            if (activityType.usesPaceDisplay) {
+                LineChart(
+                    title = "Pace over distance",
+                    points = pacePoints,
+                    secondarySeries = averagePaceOverDistance.takeIf { it.size >= 2 },
+                    secondarySeriesLabel = "Average".takeIf { averagePaceOverDistance.size >= 2 },
+                    primarySeriesLabel = "Current",
+                    valueFormatter = { "${it.toInt()}s/km" },
+                    xValueFormatter = { "%.1fkm".format(it) }
+                )
+            } else {
+                // Cycling reads more naturally as speed (higher = faster) than pace (lower =
+                // faster), so both axes flip: seconds-per-km becomes km/h.
+                val speedPoints = pacePoints.mapNotNull { (x, secPerKm) ->
+                    if (secPerKm <= 0f) null else x to (3600f / secPerKm)
+                }
+                val averageSpeedOverDistance = averagePaceOverDistance.mapNotNull { (x, secPerKm) ->
+                    if (secPerKm <= 0f) null else x to (3600f / secPerKm)
+                }
+                LineChart(
+                    title = "Speed over distance",
+                    points = speedPoints,
+                    secondarySeries = averageSpeedOverDistance.takeIf { it.size >= 2 },
+                    secondarySeriesLabel = "Average".takeIf { averageSpeedOverDistance.size >= 2 },
+                    primarySeriesLabel = "Current",
+                    valueFormatter = { "%.1f km/h".format(it) },
+                    xValueFormatter = { "%.1fkm".format(it) }
+                )
+            }
 
             LineChart(
                 title = "Elevation over distance",

@@ -25,11 +25,16 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pace_ometer.R
+import com.example.pace_ometer.data.ActivityType
 import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
 import com.example.pace_ometer.util.formatPaceSecPerKm
+import com.example.pace_ometer.util.formatSpeedFromPaceSecPerKm
 import java.text.DateFormat
 import java.util.Date
+
+private fun runActivityType(activityType: String): ActivityType =
+    runCatching { ActivityType.valueOf(activityType) }.getOrDefault(ActivityType.RUNNING)
 
 @Composable
 fun HistoryScreen(
@@ -66,7 +71,7 @@ fun HistoryScreen(
             Column(
                 modifier = Modifier.fillMaxSize().padding(padding).padding(24.dp)
             ) {
-                Text("No saved runs yet. Go for a run to see it here.")
+                Text("No saved activities yet. Go for a run, walk, or ride to see it here.")
             }
         } else {
             LazyColumn(
@@ -75,15 +80,23 @@ fun HistoryScreen(
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 items(runs, key = { it.id }) { run ->
+                    val activityType = runActivityType(run.activityType)
                     Card(modifier = Modifier.fillMaxWidth().clickable { onOpenRun(run.id) }) {
                         Column(modifier = Modifier.padding(16.dp)) {
                             Text(
-                                DateFormat.getDateTimeInstance().format(Date(run.startTimeEpochMs)),
+                                "${activityType.displayName} — " +
+                                    DateFormat.getDateTimeInstance().format(Date(run.startTimeEpochMs)),
                                 style = MaterialTheme.typography.titleSmall
                             )
                             Text(formatDistanceMeters(run.totalDistanceMeters))
                             Text(formatDurationMs(run.movingDurationMs))
-                            Text("Avg pace: ${formatPaceSecPerKm(run.averagePaceSecPerKm)}")
+                            Text(
+                                if (activityType.usesPaceDisplay) {
+                                    "Avg pace: ${formatPaceSecPerKm(run.averagePaceSecPerKm)}"
+                                } else {
+                                    "Avg speed: ${formatSpeedFromPaceSecPerKm(run.averagePaceSecPerKm)}"
+                                }
+                            )
                         }
                     }
                 }
