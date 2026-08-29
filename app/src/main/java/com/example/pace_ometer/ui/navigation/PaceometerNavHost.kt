@@ -13,6 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.pace_ometer.PaceometerApp
+import com.example.pace_ometer.data.ActivityType
 import com.example.pace_ometer.ui.activerun.ActiveRunScreen
 import com.example.pace_ometer.ui.equipment.EquipmentDetailScreen
 import com.example.pace_ometer.ui.equipment.EquipmentScreen
@@ -29,7 +30,8 @@ import kotlinx.coroutines.flow.map
 private object Routes {
     const val ONBOARDING = "onboarding"
     const val HOME = "home"
-    const val ACTIVE_RUN = "active_run"
+    const val ACTIVE_RUN = "active_run/{activityType}"
+    fun activeRun(activityType: ActivityType) = "active_run/${activityType.name}"
     const val HISTORY = "history"
     const val SETTINGS = "settings"
     const val HELP = "help"
@@ -68,7 +70,7 @@ fun PaceometerNavHost() {
         }
         composable(Routes.HOME) {
             HomeScreen(
-                onStartRun = { navController.navigate(Routes.ACTIVE_RUN) },
+                onStartRun = { activityType -> navController.navigate(Routes.activeRun(activityType)) },
                 onOpenHistory = { navController.navigate(Routes.HISTORY) },
                 onOpenRecords = { navController.navigate(Routes.RECORDS) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
@@ -76,8 +78,17 @@ fun PaceometerNavHost() {
                 onOpenLegal = { navController.navigate(Routes.LEGAL) }
             )
         }
-        composable(Routes.ACTIVE_RUN) {
-            ActiveRunScreen(onFinished = { navController.popBackStack(Routes.HOME, inclusive = false) })
+        composable(
+            Routes.ACTIVE_RUN,
+            arguments = listOf(navArgument("activityType") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val activityType = backStackEntry.arguments?.getString("activityType")
+                ?.let { runCatching { ActivityType.valueOf(it) }.getOrNull() }
+                ?: ActivityType.RUNNING
+            ActiveRunScreen(
+                activityType = activityType,
+                onFinished = { navController.popBackStack(Routes.HOME, inclusive = false) }
+            )
         }
         composable(Routes.HISTORY) {
             HistoryScreen(

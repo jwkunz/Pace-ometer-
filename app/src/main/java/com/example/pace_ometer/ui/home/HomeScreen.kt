@@ -17,6 +17,9 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -30,11 +33,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.pace_ometer.data.ActivityType
 import com.example.pace_ometer.ui.common.permissions.rememberPermissionGrantedState
 
 @Composable
 fun HomeScreen(
-    onStartRun: () -> Unit,
+    onStartRun: (ActivityType) -> Unit,
     onOpenHistory: () -> Unit,
     onOpenRecords: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -44,6 +48,7 @@ fun HomeScreen(
 ) {
     val context = LocalContext.current
     var showBackgroundLocationRationale by remember { mutableStateOf(false) }
+    var selectedActivityType by remember { mutableStateOf(ActivityType.RUNNING) }
     val runState by viewModel.runState.collectAsState()
 
     val notificationsGranted = if (Build.VERSION.SDK_INT >= 33) {
@@ -78,10 +83,13 @@ fun HomeScreen(
                 .padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Text("Ready to run?", style = MaterialTheme.typography.headlineSmall)
+            Text(
+                if (runState.isActive) "Ready to run?" else "Ready to ${selectedActivityType.noun}?",
+                style = MaterialTheme.typography.headlineSmall
+            )
 
             if (runState.isActive) {
-                Button(onClick = onStartRun, modifier = Modifier.fillMaxWidth()) {
+                Button(onClick = { onStartRun(selectedActivityType) }, modifier = Modifier.fillMaxWidth()) {
                     Text("View Current Run")
                 }
             } else if (!notificationsGranted) {
@@ -106,10 +114,19 @@ fun HomeScreen(
                     }
                 }
             } else {
-                Button(onClick = onStartRun, modifier = Modifier.fillMaxWidth()) {
-                    Text("Start Run")
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                    ActivityType.entries.forEachIndexed { index, type ->
+                        SegmentedButton(
+                            shape = SegmentedButtonDefaults.itemShape(index, ActivityType.entries.size),
+                            selected = selectedActivityType == type,
+                            onClick = { selectedActivityType = type }
+                        ) { Text(type.displayName) }
+                    }
                 }
-                if (!activityRecognitionGranted) {
+                Button(onClick = { onStartRun(selectedActivityType) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Start ${selectedActivityType.displayName}")
+                }
+                if (selectedActivityType.usesStepSensing && !activityRecognitionGranted) {
                     PermissionPrompt(
                         message = "Allow physical activity access so Pace-ometer can detect " +
                             "steps for cadence, stride, and pace tracking during GPS gaps.",

@@ -27,6 +27,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.pace_ometer.data.ActivityType
 import com.example.pace_ometer.data.settings.UnitSystem
 import com.example.pace_ometer.data.settings.UserSettings
 import com.example.pace_ometer.service.RunPhase
@@ -37,6 +38,7 @@ import com.example.pace_ometer.util.formatDistanceMeters
 import com.example.pace_ometer.util.formatDurationMs
 import com.example.pace_ometer.util.formatElevationMeters
 import com.example.pace_ometer.util.formatPaceSecPerKm
+import com.example.pace_ometer.util.formatSpeedFromPaceSecPerKm
 import com.example.pace_ometer.util.formatStepsPerDistanceUnit
 import com.example.pace_ometer.util.formatStrideLengthMeters
 import java.text.SimpleDateFormat
@@ -47,6 +49,7 @@ import kotlin.math.roundToInt
 
 @Composable
 fun ActiveRunScreen(
+    activityType: ActivityType,
     onFinished: () -> Unit,
     viewModel: ActiveRunViewModel = viewModel()
 ) {
@@ -55,7 +58,7 @@ fun ActiveRunScreen(
     val unitSystem = settings.unitSystem
 
     LaunchedEffect(Unit) {
-        if (state.phase == RunPhase.IDLE) viewModel.start()
+        if (state.phase == RunPhase.IDLE) viewModel.start(activityType)
     }
 
     val view = LocalView.current
@@ -138,28 +141,49 @@ private fun MetricsGrid(state: RunState, unitSystem: UnitSystem, settings: UserS
         "Z${zone.number} (${zone.label}, $effortPercent%)"
     } ?: "--"
 
-    val metrics = listOf(
-        "Segment pace" to formatPaceSecPerKm(state.segmentPaceSecPerKm, unitSystem),
-        "Split (projected) pace" to formatPaceSecPerKm(state.currentPaceSecPerKm, unitSystem),
-        "Average pace" to formatPaceSecPerKm(
-            averagePaceSecPerKm(state.distanceMeters, state.movingDurationMs), unitSystem
-        ),
+    val usesPace = state.activityType.usesPaceDisplay
+    val paceMetrics = if (usesPace) {
+        listOf(
+            "Segment pace" to formatPaceSecPerKm(state.segmentPaceSecPerKm, unitSystem),
+            "Split (projected) pace" to formatPaceSecPerKm(state.currentPaceSecPerKm, unitSystem),
+            "Average pace" to formatPaceSecPerKm(
+                averagePaceSecPerKm(state.distanceMeters, state.movingDurationMs), unitSystem
+            )
+        )
+    } else {
+        listOf(
+            "Segment speed" to formatSpeedFromPaceSecPerKm(state.segmentPaceSecPerKm, unitSystem),
+            "Current speed" to formatSpeedFromPaceSecPerKm(state.currentPaceSecPerKm, unitSystem),
+            "Average speed" to formatSpeedFromPaceSecPerKm(
+                averagePaceSecPerKm(state.distanceMeters, state.movingDurationMs), unitSystem
+            )
+        )
+    }
+
+    // Steps/cadence/stride are a running/walking-only signal -- cycling has no discrete steps,
+    // so these are omitted entirely rather than shown as a permanent "--".
+    val stepMetrics = if (state.activityType.usesStepSensing) {
+        listOf(
+            "Steps" to (if (state.stepCount > 0) "${state.stepCount}" else "--"),
+            "Steps per distance" to (
+                if (state.stepCount > 0) formatStepsPerDistanceUnit(state.stepCount, state.distanceMeters, unitSystem)
+                else "--"
+                ),
+            "Stride length" to (
+                if (state.stepCount > 0) formatStrideLengthMeters(state.strideLengthMeters, unitSystem) else "--"
+                )
+        )
+    } else emptyList()
+
+    val metrics = paceMetrics + listOf(
         "Elevation" to (state.elevationMeters?.let { formatElevationMeters(it, unitSystem) } ?: "--"),
         "Last segment elevation Δ" to elevationChangeLabel,
         "Heart rate" to (state.heartRateBpm?.let { "$it bpm" } ?: "--"),
         "Heart rate zone" to heartRateZoneLabel,
         "Cadence" to (state.cadenceSpm?.let { "$it spm" } ?: "--"),
         "Calories" to "${state.caloriesBurned.roundToInt()} kcal",
-        "Clock time" to clockTime,
-        "Steps" to (if (state.stepCount > 0) "${state.stepCount}" else "--"),
-        "Steps per distance" to (
-            if (state.stepCount > 0) formatStepsPerDistanceUnit(state.stepCount, state.distanceMeters, unitSystem)
-            else "--"
-            ),
-        "Stride length" to (
-            if (state.stepCount > 0) formatStrideLengthMeters(state.strideLengthMeters, unitSystem) else "--"
-            )
-    )
+        "Clock time" to clockTime
+    ) + stepMetrics
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.fillMaxWidth()) {
         metrics.chunked(2).forEach { rowItems ->

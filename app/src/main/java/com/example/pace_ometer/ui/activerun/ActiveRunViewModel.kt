@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.pace_ometer.PaceometerApp
+import com.example.pace_ometer.data.ActivityType
 import com.example.pace_ometer.data.repository.PersonalRecordRepository
 import com.example.pace_ometer.data.repository.RunRepository
 import com.example.pace_ometer.data.settings.UserSettings
@@ -30,7 +31,7 @@ class ActiveRunViewModel(application: Application) : AndroidViewModel(applicatio
         connection.bind()
     }
 
-    fun start() = connection.start()
+    fun start(activityType: ActivityType) = connection.start(activityType)
     fun pause() = connection.pause()
     fun resume() = connection.resume()
     fun stop() = connection.stop()
