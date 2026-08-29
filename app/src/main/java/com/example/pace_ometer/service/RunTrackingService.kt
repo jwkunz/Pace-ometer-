@@ -100,6 +100,9 @@ class RunTrackingService : Service() {
     private var autoPaused: Boolean = false
     private var lastRawLocationForMotionCheck: Location? = null
 
+    /** When motion was first detected again after an auto-pause -- null while idle/not paused. */
+    private var motionSustainedSinceMs: Long? = null
+
     override fun onCreate() {
         super.onCreate()
         val app = application as PaceometerApp
@@ -150,6 +153,7 @@ class RunTrackingService : Service() {
             lastMotionTimestampMs = System.currentTimeMillis()
             lastRawLocationForMotionCheck = null
             autoPaused = false
+            motionSustainedSinceMs = null
             announcementScheduler = AnnouncementScheduler(announcementIntervalMeters(settings))
             ttsAnnouncer?.setSpeechRate(settings.ttsSpeechRate)
             ttsAnnouncer?.speakAll(listOf("Starting run"))
@@ -216,6 +220,7 @@ class RunTrackingService : Service() {
     private fun resumeRun() {
         if (_runState.value.phase != RunPhase.PAUSED) return
         autoPaused = false
+        motionSustainedSinceMs = null
         // Otherwise a resume after any idle stretch longer than the auto-pause threshold (a
         // manual pause included) instantly re-triggers auto-pause on the very next tick, since
         // the idle clock was still stale from before the pause.
@@ -379,21 +384,30 @@ class RunTrackingService : Service() {
 
     /**
      * Auto-pauses when no motion has been detected for the configured idle threshold, and
-     * auto-resumes as soon as motion picks back up -- but only for a pause this triggered itself,
-     * never overriding a pause the user tapped manually. pauseRun()/resumeRun() handle the spoken
-     * announcement themselves, so this doesn't need to.
+     * auto-resumes once motion has been sustained for the configured resume threshold -- but only
+     * for a pause this triggered itself, never overriding a pause the user tapped manually.
+     * pauseRun()/resumeRun() handle the spoken announcement themselves, so this doesn't need to.
+     * The resume threshold requires *sustained* motion (not just one motion tick) so a single GPS
+     * blip or step-sensor glitch while still stationary doesn't instantly resume the run.
      */
     private fun checkAutoPause() {
         if (!currentSettings.autoPauseEnabled) return
-        val idleMs = System.currentTimeMillis() - lastMotionTimestampMs
-        val thresholdMs = currentSettings.autoPauseIdleThresholdSeconds * 1000L
+        val now = System.currentTimeMillis()
+        val idleMs = now - lastMotionTimestampMs
+        val pauseThresholdMs = currentSettings.autoPauseIdleThresholdSeconds * 1000L
+        val resumeThresholdMs = currentSettings.autoResumeMotionThresholdSeconds * 1000L
         when {
-            _runState.value.phase == RunPhase.RUNNING && idleMs >= thresholdMs -> {
+            _runState.value.phase == RunPhase.RUNNING && idleMs >= pauseThresholdMs -> {
                 autoPaused = true
+                motionSustainedSinceMs = null
                 pauseRun()
             }
-            _runState.value.phase == RunPhase.PAUSED && autoPaused && idleMs < thresholdMs -> {
-                resumeRun()
+            _runState.value.phase == RunPhase.PAUSED && autoPaused && idleMs < pauseThresholdMs -> {
+                val sustainedSinceMs = motionSustainedSinceMs ?: now.also { motionSustainedSinceMs = it }
+                if (now - sustainedSinceMs >= resumeThresholdMs) resumeRun()
+            }
+            _runState.value.phase == RunPhase.PAUSED && autoPaused && idleMs >= pauseThresholdMs -> {
+                motionSustainedSinceMs = null
             }
         }
     }

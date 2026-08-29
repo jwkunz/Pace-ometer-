@@ -59,10 +59,12 @@ private val helpSections = listOf(
     HelpSection(
         "Auto-pause",
         "Optional -- when enabled in Settings, the run automatically pauses after a configurable " +
-            "number of seconds (5 by default) without detected motion, and resumes as soon as " +
-            "motion picks back up. Pausing or resuming, whether automatic or by tapping the " +
-            "button yourself, always announces \"Pausing run\" / \"Starting run\". A pause you " +
-            "trigger yourself is never auto-resumed for you."
+            "number of seconds (5 by default) without detected motion, and resumes once motion " +
+            "has been sustained for a separately configurable number of seconds (3 by default) -- " +
+            "a brief blip of motion while still stationary won't resume it early. Pausing or " +
+            "resuming, whether automatic or by tapping the button yourself, always announces " +
+            "\"Pausing run\" / \"Starting run\". A pause you trigger yourself is never " +
+            "auto-resumed for you."
     ),
     HelpSection(
         "Voice announcements",

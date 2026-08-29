@@ -22,6 +22,7 @@ private object Keys {
     val USE_HEALTH_CONNECT_HEART_RATE = booleanPreferencesKey("use_health_connect_heart_rate")
     val AUTO_PAUSE_ENABLED = booleanPreferencesKey("auto_pause_enabled")
     val AUTO_PAUSE_IDLE_THRESHOLD_SECONDS = intPreferencesKey("auto_pause_idle_threshold_seconds")
+    val AUTO_RESUME_MOTION_THRESHOLD_SECONDS = intPreferencesKey("auto_resume_motion_threshold_seconds")
     val KEEP_SCREEN_ON_DURING_RUN = booleanPreferencesKey("keep_screen_on_during_run")
     val ANNOUNCEMENT_INTERVAL_VALUE = floatPreferencesKey("announcement_interval_value")
     val TTS_SPEECH_RATE = floatPreferencesKey("tts_speech_rate")
@@ -93,6 +94,10 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
         dataStore.edit { prefs -> prefs[Keys.AUTO_PAUSE_IDLE_THRESHOLD_SECONDS] = seconds }
     }
 
+    suspend fun updateAutoResumeMotionThresholdSeconds(seconds: Int) {
+        dataStore.edit { prefs -> prefs[Keys.AUTO_RESUME_MOTION_THRESHOLD_SECONDS] = seconds }
+    }
+
     suspend fun updateKeepScreenOnDuringRun(enabled: Boolean) {
         dataStore.edit { prefs -> prefs[Keys.KEEP_SCREEN_ON_DURING_RUN] = enabled }
     }
@@ -155,6 +160,7 @@ class SettingsRepository(private val dataStore: DataStore<Preferences>) {
             useHealthConnectHeartRate = prefs[Keys.USE_HEALTH_CONNECT_HEART_RATE] ?: false,
             autoPauseEnabled = prefs[Keys.AUTO_PAUSE_ENABLED] ?: false,
             autoPauseIdleThresholdSeconds = prefs[Keys.AUTO_PAUSE_IDLE_THRESHOLD_SECONDS] ?: 5,
+            autoResumeMotionThresholdSeconds = prefs[Keys.AUTO_RESUME_MOTION_THRESHOLD_SECONDS] ?: 3,
             keepScreenOnDuringRun = prefs[Keys.KEEP_SCREEN_ON_DURING_RUN] ?: false,
             announcementIntervalValue = prefs[Keys.ANNOUNCEMENT_INTERVAL_VALUE] ?: 1f,
             ttsSpeechRate = prefs[Keys.TTS_SPEECH_RATE] ?: 1.0f,

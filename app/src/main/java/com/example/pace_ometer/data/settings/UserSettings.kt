@@ -15,6 +15,7 @@ data class UserSettings(
     val useHealthConnectHeartRate: Boolean = false,
     val autoPauseEnabled: Boolean = false,
     val autoPauseIdleThresholdSeconds: Int = 5,
+    val autoResumeMotionThresholdSeconds: Int = 3,
     val keepScreenOnDuringRun: Boolean = false,
     val announcementIntervalValue: Float = 1f,
     val announcementIntervalUnit: UnitSystem = UnitSystem.METRIC,

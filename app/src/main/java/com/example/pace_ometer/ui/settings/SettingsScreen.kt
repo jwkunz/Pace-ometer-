@@ -79,6 +79,9 @@ fun SettingsScreen(
     var autoPauseThresholdText by remember(settings.autoPauseIdleThresholdSeconds) {
         mutableStateOf(settings.autoPauseIdleThresholdSeconds.toString())
     }
+    var autoResumeThresholdText by remember(settings.autoResumeMotionThresholdSeconds) {
+        mutableStateOf(settings.autoResumeMotionThresholdSeconds.toString())
+    }
 
     Scaffold(topBar = { TopAppBar(title = { Text("Settings") }) }) { padding ->
         Column(
@@ -162,6 +165,16 @@ fun SettingsScreen(
                             ?.let { seconds -> viewModel.updateAutoPauseIdleThresholdSeconds(seconds) }
                     },
                     label = { Text("Pause after (seconds without motion)") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                OutlinedTextField(
+                    value = autoResumeThresholdText,
+                    onValueChange = {
+                        autoResumeThresholdText = it
+                        it.toIntOrNull()?.takeIf { seconds -> seconds > 0 }
+                            ?.let { seconds -> viewModel.updateAutoResumeMotionThresholdSeconds(seconds) }
+                    },
+                    label = { Text("Resume after (seconds of motion)") },
                     modifier = Modifier.fillMaxWidth()
                 )
             }

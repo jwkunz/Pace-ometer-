@@ -64,6 +64,10 @@ class SettingsViewModel(application: Application) : AndroidViewModel(application
         viewModelScope.launch { settingsRepository.updateAutoPauseIdleThresholdSeconds(seconds) }
     }
 
+    fun updateAutoResumeMotionThresholdSeconds(seconds: Int) {
+        viewModelScope.launch { settingsRepository.updateAutoResumeMotionThresholdSeconds(seconds) }
+    }
+
     fun updateKeepScreenOnDuringRun(enabled: Boolean) {
         viewModelScope.launch { settingsRepository.updateKeepScreenOnDuringRun(enabled) }
     }
