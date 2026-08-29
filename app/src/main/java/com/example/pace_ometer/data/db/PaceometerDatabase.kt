@@ -25,7 +25,7 @@ import com.example.pace_ometer.data.db.entity.SeasonEntity
         EquipmentEntity::class,
         RunEquipmentCrossRef::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = true
 )
 abstract class PaceometerDatabase : RoomDatabase() {
@@ -70,6 +70,17 @@ abstract class PaceometerDatabase : RoomDatabase() {
         val MIGRATION_3_4 = object : Migration(3, 4) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `runs` ADD COLUMN `stepCount` INTEGER")
+            }
+        }
+
+        /**
+         * Adds activity-type support (Running/Walking/Cycling). Every run recorded before this
+         * migration was, in effect, a run -- so existing rows backfill as RUNNING rather than an
+         * unknown/unset state, matching what the app has only ever tracked until now.
+         */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `runs` ADD COLUMN `activityType` TEXT NOT NULL DEFAULT 'RUNNING'")
             }
         }
     }

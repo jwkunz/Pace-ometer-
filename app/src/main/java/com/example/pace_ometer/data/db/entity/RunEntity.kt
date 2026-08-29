@@ -21,6 +21,7 @@ data class RunEntity(
     val stepCount: Int? = null,
     val bodyWeightKgAtRunTime: Double? = null,
     val unitSystemAtRunTime: String = "METRIC",
+    val activityType: String = "RUNNING",
     val isSaved: Boolean = false,
     val notes: String? = null
 )
