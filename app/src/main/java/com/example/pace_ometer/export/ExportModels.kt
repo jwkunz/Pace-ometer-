@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
  */
 @Serializable
 data class RunExport(
-    val exportSchemaVersion: Int = 1,
+    val exportSchemaVersion: Int = 2,
     val exportedAtEpochMs: Long,
     val runs: List<RunExportEntry>
 )
@@ -32,6 +32,9 @@ data class RunExportEntry(
     val estimatedCalories: Double?,
     val stepCount: Int?,
     val unitSystemAtRunTime: String,
+    // Added in schema version 2 -- absent (schema 1) exports predate activity types and were
+    // always a run, so treat a missing value as RUNNING when reading an old export back in.
+    val activityType: String = "RUNNING",
     val samples: List<RunSampleExportEntry>
 )
 

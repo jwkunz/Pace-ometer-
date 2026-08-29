@@ -43,6 +43,7 @@ class RunJsonExporter(private val runRepository: RunRepository) {
         estimatedCalories = estimatedCalories,
         stepCount = stepCount,
         unitSystemAtRunTime = unitSystemAtRunTime,
+        activityType = activityType,
         samples = samples.map {
             RunSampleExportEntry(
                 timestampEpochMs = it.timestampEpochMs,
