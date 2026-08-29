@@ -15,6 +15,7 @@ data class UserSettings(
     val useHealthConnectHeartRate: Boolean = false,
     val autoPauseEnabled: Boolean = false,
     val autoPauseIdleThresholdSeconds: Int = 5,
+    val keepScreenOnDuringRun: Boolean = false,
     val announcementIntervalValue: Float = 1f,
     val announcementIntervalUnit: UnitSystem = UnitSystem.METRIC,
     val ttsSpeechRate: Float = 1.0f,

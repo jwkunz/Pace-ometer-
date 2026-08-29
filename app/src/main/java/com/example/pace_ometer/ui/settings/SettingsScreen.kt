@@ -166,6 +166,24 @@ fun SettingsScreen(
                 )
             }
 
+            Text("Display", style = MaterialTheme.typography.titleSmall)
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(
+                    "Keep the screen on while a run is active, instead of following the phone's " +
+                        "normal sleep timeout.",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(
+                    checked = settings.keepScreenOnDuringRun,
+                    onCheckedChange = { viewModel.updateKeepScreenOnDuringRun(it) }
+                )
+            }
+
             Text("Voice announcements", style = MaterialTheme.typography.titleSmall)
             VoiceAnnouncementSection(settings = settings, viewModel = viewModel)
 

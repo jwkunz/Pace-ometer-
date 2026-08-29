@@ -18,11 +18,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.pace_ometer.data.settings.UnitSystem
@@ -54,6 +56,12 @@ fun ActiveRunScreen(
 
     LaunchedEffect(Unit) {
         if (state.phase == RunPhase.IDLE) viewModel.start()
+    }
+
+    val view = LocalView.current
+    DisposableEffect(settings.keepScreenOnDuringRun) {
+        view.keepScreenOn = settings.keepScreenOnDuringRun
+        onDispose { view.keepScreenOn = false }
     }
 
     Scaffold { padding ->
