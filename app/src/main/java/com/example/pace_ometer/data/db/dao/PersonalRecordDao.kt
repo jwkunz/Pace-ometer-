@@ -12,11 +12,14 @@ interface PersonalRecordDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun upsert(record: PersonalRecordEntity)
 
-    @Query("SELECT * FROM personal_records WHERE category = :category AND scope = :scope")
-    suspend fun get(category: String, scope: String): PersonalRecordEntity?
+    @Query(
+        "SELECT * FROM personal_records WHERE category = :category AND scope = :scope " +
+            "AND activityType = :activityType"
+    )
+    suspend fun get(category: String, scope: String, activityType: String): PersonalRecordEntity?
 
-    @Query("SELECT * FROM personal_records WHERE scope = :scope")
-    fun observeForScope(scope: String): Flow<List<PersonalRecordEntity>>
+    @Query("SELECT * FROM personal_records WHERE scope = :scope AND activityType = :activityType")
+    fun observeForScope(scope: String, activityType: String): Flow<List<PersonalRecordEntity>>
 
     @Query("SELECT DISTINCT scope FROM personal_records")
     fun observeScopes(): Flow<List<String>>

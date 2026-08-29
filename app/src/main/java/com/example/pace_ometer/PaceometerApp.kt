@@ -21,7 +21,8 @@ class PaceometerApp : Application() {
             .addMigrations(
                 PaceometerDatabase.MIGRATION_2_3,
                 PaceometerDatabase.MIGRATION_3_4,
-                PaceometerDatabase.MIGRATION_4_5
+                PaceometerDatabase.MIGRATION_4_5,
+                PaceometerDatabase.MIGRATION_5_6
             )
             // Pre-release app; only a real migration path is kept for versions already
             // installed on the test device, anything older falls back to a fresh start.

@@ -14,8 +14,8 @@ class PersonalRecordRepository(
     private val personalRecordDao: PersonalRecordDao,
     private val seasonDao: SeasonDao
 ) {
-    fun observeForScope(scope: String): Flow<List<PersonalRecordEntity>> =
-        personalRecordDao.observeForScope(scope)
+    fun observeForScope(scope: String, activityType: String): Flow<List<PersonalRecordEntity>> =
+        personalRecordDao.observeForScope(scope, activityType)
 
     fun observeScopes(): Flow<List<String>> = personalRecordDao.observeScopes()
 
@@ -29,12 +29,13 @@ class PersonalRecordRepository(
 
         for (scope in scopes) {
             for (candidate in candidates) {
-                val existing = personalRecordDao.get(candidate.category, scope)
+                val existing = personalRecordDao.get(candidate.category, scope, run.activityType)
                 if (existing == null || isBetter(candidate.category, candidate.value, existing.value)) {
                     personalRecordDao.upsert(
                         PersonalRecordEntity(
                             category = candidate.category,
                             scope = scope,
+                            activityType = run.activityType,
                             value = candidate.value,
                             runId = run.id,
                             achievedAtEpochMs = System.currentTimeMillis()

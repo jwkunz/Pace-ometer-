@@ -25,7 +25,7 @@ import com.example.pace_ometer.data.db.entity.SeasonEntity
         EquipmentEntity::class,
         RunEquipmentCrossRef::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = true
 )
 abstract class PaceometerDatabase : RoomDatabase() {
@@ -81,6 +81,34 @@ abstract class PaceometerDatabase : RoomDatabase() {
         val MIGRATION_4_5 = object : Migration(4, 5) {
             override fun migrate(db: SupportSQLiteDatabase) {
                 db.execSQL("ALTER TABLE `runs` ADD COLUMN `activityType` TEXT NOT NULL DEFAULT 'RUNNING'")
+            }
+        }
+
+        /**
+         * Scopes personal records by activity type too, so a cycling PR can't silently overwrite
+         * a running one in the same category/scope slot. Existing records backfill as RUNNING,
+         * matching every run recorded before activity types existed. Adding a column to the
+         * primary key requires rebuilding the table -- SQLite has no ALTER TABLE for that.
+         */
+        val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `personal_records_new` (" +
+                        "`category` TEXT NOT NULL, " +
+                        "`scope` TEXT NOT NULL, " +
+                        "`activityType` TEXT NOT NULL, " +
+                        "`value` REAL NOT NULL, " +
+                        "`runId` INTEGER NOT NULL, " +
+                        "`achievedAtEpochMs` INTEGER NOT NULL, " +
+                        "PRIMARY KEY(`category`, `scope`, `activityType`))"
+                )
+                db.execSQL(
+                    "INSERT INTO `personal_records_new` " +
+                        "(category, scope, activityType, value, runId, achievedAtEpochMs) " +
+                        "SELECT category, scope, 'RUNNING', value, runId, achievedAtEpochMs FROM `personal_records`"
+                )
+                db.execSQL("DROP TABLE `personal_records`")
+                db.execSQL("ALTER TABLE `personal_records_new` RENAME TO `personal_records`")
             }
         }
     }
