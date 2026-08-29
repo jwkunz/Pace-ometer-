@@ -29,8 +29,8 @@ android {
         applicationId = "com.example.pace_ometer"
         minSdk = 26
         targetSdk = 36
-        versionCode = 11
-        versionName = "1.5"
+        versionCode = 12
+        versionName = "1.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
